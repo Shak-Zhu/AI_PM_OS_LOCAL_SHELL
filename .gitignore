@@ -1,0 +1,4 @@
+# Private development governance for building this shell product.
+# This directory has its own Git repository and must never be included
+# in the distributable product shell or the outer product repository.
+/_DEV_PROJECT_CONTROL/
