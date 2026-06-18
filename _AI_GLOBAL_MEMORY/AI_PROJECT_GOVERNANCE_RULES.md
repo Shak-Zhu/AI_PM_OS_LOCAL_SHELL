@@ -2,7 +2,7 @@
 
 - 版本：v0.1
 - 状态：Draft
-- 最后更新：2026-06-18
+- 最后更新：YYYY-MM-DD
 
 - 采用 Hybrid：外层 PMBOK/PRINCE2 阶段门禁，内层 Agile 迭代。
 - Scope、Decision、Change 和 Approved Baseline 必须由 Human Owner 或配置的审批角色批准。

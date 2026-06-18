@@ -2,7 +2,7 @@
 
 - 版本：v0.1
 - 状态：Active / Empty
-- 最后更新：2026-06-18
+- 最后更新：YYYY-MM-DD
 
 | Acceptance ID | 对象 | 版本 | PM/QC 状态 | Human Acceptance | 日期 | 证据 |
 |---|---|---|---|---|---|---|

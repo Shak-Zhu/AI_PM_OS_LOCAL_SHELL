@@ -1,1 +1,4 @@
-{"source":"01_PM_DOCUMENTS/PM_RAID_LOG.md","items":[{"id":"R-001","type":"Risk","title":"macOS/Cursor 真实验收环境未确认","impact":"阻塞 P0 验收","severity":"High","probability":"Medium","owner":"Human Owner","due_date":"2026-06-25","status":"Open","next_step":"确认环境","last_updated":"2026-06-18"}]}
+{
+  "source": null,
+  "items": []
+}

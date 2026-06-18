@@ -2,7 +2,7 @@
 
 - 版本：v0.1
 - 状态：Draft
-- 最后更新：2026-06-18
+- 最后更新：YYYY-MM-DD
 
 - Git 是版本控制系统；不自动 push。
 - 重大更新前 checkpoint，批准更新后 commit。

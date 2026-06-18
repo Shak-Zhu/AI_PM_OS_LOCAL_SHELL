@@ -2,25 +2,24 @@
 
 - 版本：v0.1
 - 状态：Active
-- 最后更新：2026-06-18
+- 最后更新：YYYY-MM-DD
 
 ## 状态快照
 
-- 当前阶段：启动与规划。
-- RAG：Amber，原因是范围尚待批准、完成日期 TBD、跨平台实测资源未确认。
-- Scope Baseline：Draft v0.1 / Not Approved。
-- 当前 Sprint：未启动。
-- 正式工作包：0。
-- 最新授权：Human Owner 已要求所有项目文档落盘并进入启动、规划过程组。
+- 当前阶段：`INITIALIZE_PROJECT`（由 ai-pm-os Skill 初始化后填充）
+- RAG：`INITIALIZE_PROJECT`
+- Scope Baseline：`INITIALIZE_PROJECT`
+- 当前 Sprint：`INITIALIZE_PROJECT`
+- 正式工作包：`INITIALIZE_PROJECT`
+- 最新授权：`INITIALIZE_PROJECT`
 
 ## 当前阻塞与门禁
 
-1. Project Brief 和 Scope Baseline 尚待 Human Owner 批准。
-2. 未完成估算，不能冻结进度基线。
-3. 未确认 macOS 与 Cursor 真实验收环境的提供方式。
+1. 项目尚未初始化。调用 `ai-pm-os 初始化项目` 开始。
+2. Scope Baseline 未批准前，不得创建正式 WBS 或正式 Coder Work Package。
 
 ## 下一步
 
-1. 完成并验证启动与规划文档包。
-2. 请求 Human Owner 审批 Project Brief、需求登记册和 Scope Baseline。
-3. 批准后再生成正式 WBS、里程碑计划和首批 Coder Work Package。
+1. 调用 `ai-pm-os 初始化项目`。
+2. 完成初始化后，审阅生成的项目状态并提供基础信息。
+3. 确认 Scope Baseline 范围。

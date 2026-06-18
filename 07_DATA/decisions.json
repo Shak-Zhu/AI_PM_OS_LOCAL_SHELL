@@ -1,1 +1,4 @@
-{"source":"01_PM_DOCUMENTS/PM_DECISION_LOG.md","decisions":[{"decision_id":"DEC-001","decision":"只开发统一 ai-pm-os Skill","rationale":"降低治理分叉","date":"2026-06-18","owner":"Human Owner","impact":"产品架构","source":"冻结决策 1","status":"Confirmed"}]}
+{
+  "source": null,
+  "decisions": []
+}

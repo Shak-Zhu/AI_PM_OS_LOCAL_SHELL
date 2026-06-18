@@ -1,1 +1,3 @@
-{"documents":[{"file":"01_PM_DOCUMENTS/PM_PROJECT_BRIEF.md","category":"Startup","status":"Pending Review","approval_status":"Pending Review","last_updated":"2026-06-18","health":"Amber","required":true},{"file":"01_PM_DOCUMENTS/PM_SCOPE_BASELINE.md","category":"Baseline","status":"Draft","approval_status":"Not Approved","last_updated":"2026-06-18","health":"Amber","required":true}]}
+{
+  "documents": []
+}

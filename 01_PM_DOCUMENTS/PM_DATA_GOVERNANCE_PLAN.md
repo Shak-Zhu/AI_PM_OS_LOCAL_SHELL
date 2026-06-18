@@ -2,7 +2,7 @@
 
 - 版本：v0.1
 - 状态：Draft
-- 最后更新：2026-06-18
+- 最后更新：YYYY-MM-DD
 
 - Markdown 是权威源；`07_DATA/` 是 JSON 主副本；`06_DASHBOARD/public/data/` 是展示副本。
 - JSON Schema 必须定义类型、required、enum、nullable 和日期格式。

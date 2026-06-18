@@ -2,13 +2,31 @@
 
 - 版本：v0.1
 - 状态：Open / Awaiting Scope Approval
-- 最后更新：2026-06-18
+- 最后更新：YYYY-MM-DD
+
+> 本文件由 ai-pm-os Skill 在完成估算后维护。
+
+## 估算条目格式
 
 | Estimate ID | 对象 | 方法 | 值 | 单位 | 信心 | 假设 | 风险 | Estimator | 状态 |
 |---|---|---|---|---|---|---|---|---|---|
-| EST-001 | M1 | 三点估算 + 自下而上 | 未估算 | days | Low | Scope 批准后拆分 | Tech Owner 未指定 | 待指定 | Open |
-| EST-002 | V1 P0 | 三点估算 + WBS 汇总 | 未估算 | days | Low | M1/P0 分阶段 | 跨平台与双 Agent 复杂度 | 待指定 | Open |
 
-## 估算会议输入
+### ID 前缀
 
-批准的 Scope、REQ-001~REQ-030、技术约束、验收环境、人员/Agent 可用性。未完成上述输入前不得承诺完成日期。
+| 类型 | 前缀 | 示例 |
+|---|---|---|
+| 估算 | EST- | EST-### |
+
+### 估算方法
+
+| 方法 | 适用场景 |
+|---|---|
+| Expert Judgment | 需求模糊 |
+| Analogy | 有历史数据 |
+| Bottom-up | 工作包明确 |
+| Three-point | 不确定性高 |
+| PERT | 复杂估算 |
+| Planning Poker | Sprint Story Point |
+| Velocity-based | 已有 Sprint 历史 |
+
+估算提醒规则见 `_AI_GLOBAL_MEMORY/AI_ESTIMATION_RULES.md`。

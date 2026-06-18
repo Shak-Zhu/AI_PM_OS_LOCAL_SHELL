@@ -2,10 +2,31 @@
 
 - 版本：v0.1
 - 状态：Active
-- 最后更新：2026-06-18
+- 最后更新：YYYY-MM-DD
+
+> 本文件由 ai-pm-os Skill 持续维护。Scope Baseline 批准后，任何新增范围、删除范围或改变范围必须进入本文件并获得批准。
+
+## 变更条目格式
 
 | Change ID | 请求 | 请求人 | 范围/时间/资源/测试/风险影响 | 决策 | 批准人 | 日期 |
 |---|---|---|---|---|---|---|
-| CHG-001 | 用第 33 章澄清 V1.0 的优先级和验收边界 | Human Owner | 澄清 P0/M1、平台、报告、敏捷、同步和测试；不删除原能力 | Approved | Human Owner | 2026-06-18 |
-| CHG-002 | 修正输入边界为 Agent Context Capability | Human Owner | 移除格式白名单解释；不新增自研解析范围 | Approved | Human Owner | 2026-06-18 |
-| CHG-003 | 新增角色配置文件 | Human Owner | P0 新增 1 个 Markdown 和 1 个 JSON 数据契约 | Approved | Human Owner | 2026-06-18 |
+
+### ID 前缀
+
+| 类型 | 前缀 | 示例 |
+|---|---|---|
+| 变更 | CHG- | CHG-### |
+
+### 变更控制规则
+
+1. Scope Baseline 批准后，任何新增范围必须进入 Change Log 并获得批准。
+2. 影响时间、资源或测试的重大变更必须记录影响分析。
+3. 批准前不得实施变更。
+4. 变更必须更新相关 JSON 文件。
+
+### 状态
+
+- **Proposed**：已提出，审批中
+- **Approved**：已批准，可实施
+- **Rejected**：已拒绝
+- **Implemented**：已实施

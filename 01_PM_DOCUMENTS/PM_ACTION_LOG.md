@@ -2,10 +2,25 @@
 
 - 版本：v0.1
 - 状态：Active
-- 最后更新：2026-06-18
+- 最后更新：YYYY-MM-DD
+
+> 本文件由 ai-pm-os Skill 持续维护。行动项由 Human Owner 批准的 Pending Updates 或会议纪要生成。
+
+## 行动项条目格式
 
 | Action ID | 行动 | Owner | Due Date | Priority | Related Item | Next Step | Status |
 |---|---|---|---|---|---|---|---|
-| ACT-001 | 审批 APR-001 至 APR-006 | Human Owner | TBD | P0 | PU-001~005 | 审阅文档包 | Open |
-| ACT-002 | 指定 Tech Owner | Human Owner | 2026-06-25 | P0 | GAP-005/I-001 | 提供负责人标识 | Open |
-| ACT-003 | 确认 macOS/Cursor 验收环境 | Human Owner | 2026-06-25 | P0 | R-001/A-001 | 确认设备、账号、测试人 | Open |
+
+### ID 前缀
+
+| 类型 | 前缀 | 示例 |
+|---|---|---|
+| 行动项 | ACT- | ACT-### |
+
+### 状态
+
+- **Open**：待执行
+- **In Progress**：执行中
+- **Done**：已完成
+- **Blocked**：被阻塞
+- **Cancelled**：已取消

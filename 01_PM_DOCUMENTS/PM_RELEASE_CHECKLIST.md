@@ -2,7 +2,7 @@
 
 - 版本：v0.1
 - 状态：Draft
-- 最后更新：2026-06-18
+- 最后更新：YYYY-MM-DD
 
 - [ ] P0 Scope 100% Human Accepted。
 - [ ] 15 个自动验收场景通过。

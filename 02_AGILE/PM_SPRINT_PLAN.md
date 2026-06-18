@@ -2,7 +2,7 @@
 
 - 版本：v0.1
 - 状态：Template / Not Started
-- 最后更新：2026-06-18
+- 最后更新：YYYY-MM-DD
 
 - Sprint ID：待定
 - Goal：待 Scope 批准后定义

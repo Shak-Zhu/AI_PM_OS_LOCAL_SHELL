@@ -1,1 +1,4 @@
-{"source":"01_PM_DOCUMENTS/PM_CHANGE_LOG.md","changes":[{"change_id":"CHG-001","request":"第 33 章澄清 V1.0","requested_by":"Human Owner","reason":"消除验收歧义","impact_on_scope":"澄清 P0/M1","impact_on_timeline":"待估算","impact_on_resource":"新增跨平台实测","impact_on_testing":"明确 15 场景","impact_on_risk":"降低歧义","decision":"Approved","approved_by":"Human Owner","date":"2026-06-18"}]}
+{
+  "source": null,
+  "changes": []
+}

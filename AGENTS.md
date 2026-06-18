@@ -1,4 +1,4 @@
-# AI PM OS Local Shell Agent Rules
+# AI PM OS Agent Rules
 
 ## 启动顺序
 

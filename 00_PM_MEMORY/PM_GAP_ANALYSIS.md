@@ -2,15 +2,24 @@
 
 - 版本：v0.1
 - 状态：Active
-- 最后更新：2026-06-18
+- 最后更新：YYYY-MM-DD
+
+> 本文件由 ai-pm-os Skill 持续维护，记录项目启动和执行过程中识别的缺口。
+
+## 缺口类型说明
+
+- Approval：审批相关缺口
+- Scope：范围相关缺口
+- Schedule：进度相关缺口
+- Estimation：估算相关缺口
+- Resource：资源相关缺口
+- Data：数据与一致性缺口
+- Baseline：基线相关缺口
+
+## 缺口条目
 
 | Gap ID | 类型 | 描述 | 影响 | 建议修复 | Owner | 状态 |
 |---|---|---|---|---|---|---|
-| GAP-001 | Approval | Project Brief 尚未明确批准 | 无法正式建立范围基线 | Human Owner 审批 APR-001 | Human Owner | Open |
-| GAP-002 | Approval | Scope Baseline 尚未批准 | 禁止正式 WBS/工作包 | 审批 APR-003 | Human Owner | Open |
-| GAP-003 | Schedule | 完成日期与阶段日期均为 TBD | 无法冻结计划和关键路径 | 完成估算后确认日期 | PM Owner | Open |
-| GAP-004 | Estimation | P0 需求尚未进行三点/自下而上估算 | 计划可信度低 | 需求批准后组织估算 | Tech Owner | Open |
-| GAP-005 | Resource | Tech Owner 未指定 | 无法确认技术估算与交付责任 | 指定 Tech Owner | Human Owner | Open |
-| GAP-006 | Environment | macOS 与 Cursor 实测环境未确认 | P0 跨平台验收有风险 | 在测试计划中明确环境提供方式 | Human Owner | Open |
-| GAP-007 | Data Contract | JSON Schema 尚未形成正式文件 | Schema 验收不可执行 | 实现前完成 schema 设计 | Tech Owner | Open |
-| GAP-008 | Baseline | V1.0 与补充口径尚未批准为统一需求集 | 解释可能分叉 | 批准 APR-006 | Human Owner | Open |
+| GAP-### | INITIALIZE | 项目尚未初始化 | 无法进行项目管理 | 运行 `ai-pm-os 初始化项目` | 待确认 | Open |
+
+缺口由 ai-pm-os Skill 在检测到缺失项时自动生成。

@@ -1,1 +1,11 @@
-{"scope_baseline":{"status":"Draft","approval_status":"Not Approved","version":"v0.1","approved_by":null,"approved_at":null},"in_scope":["REQ-001~REQ-030"],"out_of_scope":["REQ-031~REQ-034 的 P1/P2 深度能力"]}
+{
+  "scope_baseline": {
+    "status": null,
+    "approval_status": null,
+    "version": null,
+    "approved_by": null,
+    "approved_at": null
+  },
+  "in_scope": [],
+  "out_of_scope": []
+}
