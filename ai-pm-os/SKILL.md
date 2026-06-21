@@ -102,12 +102,15 @@ target_agents: [Cursor, Codex]
 | 估算建议 | ESTIMATION | PMP/PMBOK + APM |
 | 缺口识别 | GAP | PMO + APM |
 | 会议建议 | MEETING_ADVISORY | PMO + PRINCE2 |
+| 会议建议 | MEETING_ADVISORY | PMO + PRINCE2 |
+| 敏捷治理 | AGILE | Scrum / Kanban / Hybrid（自动选择）|
 | 刷新 Dashboard | DASHBOARD_SYNC | Hybrid |
 
 ### 4.2 框架适用边界
 
-七类框架（PMBOK、PRINCE2、APM、PMO、Scrum、Kanban、Hybrid）的
+八类框架（PMBOK、PRINCE2、APM、PMO、Scrum、Kanban、Hybrid、Agile Delivery）的
 适用 / 不适用 / 组合 / 输出规则见 `references/framework-matrix.md`。
+敏捷专业行为规则见 `references/agile-delivery-rules.md`。
 任何输出必须显式声明所用的框架组合；不得用"按最佳实践"代替。
 
 ## 5. 失败与升级

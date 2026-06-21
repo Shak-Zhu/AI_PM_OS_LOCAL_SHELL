@@ -83,7 +83,19 @@
 - **必须**对每个产品输出标注 1 个主框架 + 0..n 辅助框架。
 - **必须**对每次失败 / 升级显式引用对应框架的"不适用"或"例外管理"规则。
 
-## 9. 与场景的对应
+## 9. Agile Delivery 框架
+
+| 字段 | 内容 |
+|---|
+| 适用 | Sprint / Backlog / Story / DoR / DoD / Acceptance Criteria / Story Point / WIP / Blocked / Carry-over 维护；敏捷框架自动选择；Scope Baseline 一致性；敏捷语义不变量 |
+| 不适用 | 自动 Velocity 预测、资源负载优化、完整 Jira/Linear 工作流引擎 |
+| 组合 | 与所有框架组合；与 Hybrid 组合提供上/下层治理；与 PMO 组合提供审批与 WIP 限制 |
+| 输出 | Sprint Backlog、DoR/DoD 一致性报告、Scope 冲突 Gap、WIP/Blocked 状态、Carry-over 报告 |
+| 必备引用 | Story ID、DoR/DoD 状态、Scope Baseline 版本、Sprint 编号、WIP 限制值 |
+
+敏捷专业行为规则（Scrum / Kanban / Hybrid 的门禁、DoR/DoD 分离、Scope 一致性、Story 质量缺口、WIP、Carry-over）见 `references/agile-delivery-rules.md`。
+
+## 10. 与场景的对应
 
 `scenarios/scenarios.md` 的所有 Given / When / Then 必须能映射回本表的某
 一行的"输出"与"必备引用"。任何场景若找不到映射即视为无效场景。

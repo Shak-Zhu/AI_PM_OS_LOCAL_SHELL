@@ -388,3 +388,200 @@
   不得以"按最佳实践"为名义跳过框架声明；
   不得因未指定框架而不执行。
 - **Evidence**: `03_MEETINGS/meeting_minutes/*.md`、`00_PM_MEMORY/PM_PENDING_UPDATES.md`.
+
+
+
+---
+
+## 23. Scrum DoR 未满足（不得进入 Sprint）
+
+- **ID**: SC-AGILE-DOR-01
+- **Framework**: Scrum + Agile Delivery
+- **Given**: Sprint Planning 进行中；US-001 状态 Ready；US-001 缺少 Acceptance Criteria（无 AC 列表），Story Point 未估算，无开发 Owner 分配。
+- **When**: Skill 执行 AGILE 工作流，检测 US-001 DoR 状态。
+- **Then**:
+  1. Skill 输出 Gap: story-missing-ac（缺 Acceptance Criteria）+ Gap: story-missing-sp（缺 Story Point）+ Gap: story-missing-owner（缺 Owner）；
+  2. Skill 不得将 US-001 标记为 committed 进入 Sprint Backlog；
+  3. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-AGILE-001，记录三处缺口；
+  4. Skill 建议 PO 在 US-001 满足 DoR 前不得将其纳入 committed Sprint Backlog。
+- **Allow**: 写 Gap、建议 PO 补充 DoR 检查项。
+- **Forbid**: 不得将 US-001 标记为 committed；不得伪造缺失字段值（自动填入 AC/SP/Owner）；不得跳过 DoR Gate。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、02_AGILE/PM_SPRINT_BACKLOG.md。
+
+## 24. Scrum DoD 未满足（不得标记 Done）
+
+- **ID**: SC-AGILE-DOD-01
+- **Framework**: Scrum + Agile Delivery
+- **Given**: Sprint 3 结束；US-005 状态为 In Review；US-005 的 DoD 检查项：AC 全部通过、Code Review 通过、集成测试通过、PO 验收。US-005 的集成测试未通过（1 个测试失败）。
+- **When**: Skill 执行 AGILE 工作流，对 US-005 执行 DoD 检查。
+- **Then**:
+  1. Skill 检测到 US-005 DoD 未满足（集成测试失败）；
+  2. Skill 输出 Gap: story-dod-incomplete；
+  3. Skill 不得将 US-005 状态改为 Done；
+  4. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-AGILE-002，记录未满足的 DoD 检查项；
+  5. Skill 建议 US-005 退回 In Progress 并修复集成测试。
+- **Allow**: 写 Gap、建议修复路径。
+- **Forbid**: 不得将 US-005 标记为 Done；不得跳过 DoD 检查；不得伪造 DoD 通过记录。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、02_AGILE/PM_SPRINT_BACKLOG.md。
+
+## 25. DoR 与 DoD 概念混淆拒绝
+
+- **ID**: SC-AGILE-DOR-02
+- **Framework**: Scrum + Agile Delivery
+- **Given**: PO 说 US-002 已经在 DoR 全部通过，DoD 就不需要再检查了，直接算完成。
+- **When**: Skill 执行 AGILE 工作流，检测 DoR 与 DoD 混淆。
+- **Then**:
+  1. Skill 输出 Escalation: dor-dod-confused；
+  2. Skill 明确说明 DoR 与 DoD 用途不同（DoR = 可承诺条件；DoD = 完成条件）；
+  3. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-AGILE-003，标注 DoR 不等于 DoD 概念需要澄清；
+  4. Skill 拒绝将 US-002 直接标记 Done，必须重新执行完整 DoD 检查。
+- **Allow**: 写 Gap、拒绝操作。
+- **Forbid**: 不得以 DoR 通过为由跳过 DoD；不得混淆两个概念。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、02_AGILE/PM_SPRINT_BACKLOG.md。
+
+## 26. 未批准 Story 进入 committed Sprint（Scope 冲突）
+
+- **ID**: SC-AGILE-SCP-01
+- **Framework**: Scrum + Agile Delivery + PMO
+- **Given**: Approved Scope Baseline v1.1；Sprint 4 Backlog 中 BL-021 关联 REQ-042；REQ-042 不在 Approved Scope Baseline v1.1 中；BL-021 状态为 committed。
+- **When**: Skill 执行 AGILE 或 DASHBOARD_SYNC 工作流，进行 Scope 一致性检查。
+- **Then**:
+  1. Skill 检测到 BL-021 与 Approved Scope 冲突；
+  2. Skill 输出 Conflict: sprint-scope；
+  3. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-SCP-004；
+  4. Skill 在 PM_PENDING_UPDATES.md 写入 PU-CHG-005，请求变更批准将 REQ-042 纳入 Scope；
+  5. Skill 在 PM_RAID_LOG.md 写入 R-2026-### 标 scope-creep；
+  6. Skill 不得将 BL-021 保持在 committed 状态；必须将其转为 blocked 或待审批状态；
+  7. Skill 不得从 Sprint Backlog 删除 BL-021；不得修改 Approved Scope；
+  8. Skill 在 Daily Briefing 中标注 Scope 冲突，建议召开 Scope 评估会议。
+- **Allow**: 写 Gap、PU、Risk、Briefing 标注；将 BL-021 转为 blocked 或待审批状态。
+- **Forbid**: 不得将未批准条目保持在 committed Sprint Backlog；不得静默忽略 Scope 冲突；不得修改 Approved Scope Baseline。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、00_PM_MEMORY/PM_PENDING_UPDATES.md、01_PM_DOCUMENTS/PM_RAID_LOG.md。
+
+## 27. Kanban WIP 超限禁止拉入
+
+- **ID**: SC-AGILE-WIP-01
+- **Framework**: Kanban + Agile Delivery
+- **Given**: Kanban 看板的 In Progress 列 WIP 限制为 3；当前 In Progress 列已有 3 个 Story（US-010、US-011、US-012）；团队成员问可以再拉一个进来吗。
+- **When**: Skill 执行 AGILE 工作流，检测 WIP 状态。
+- **Then**:
+  1. Skill 检测到 In Progress WIP = 3 = WIP 限制；
+  2. Skill 输出 Constraint: wip-limit-reached；
+  3. Skill 拒绝将新 Story 拉入 In Progress 列；
+  4. Skill 建议优先完成当前在制的 3 个 Story（US-010/011/012）再拉入新工作；
+  5. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-AGILE-005。
+- **Allow**: 写 Gap、建议优先级。
+- **Forbid**: 不得在 WIP 超限时拉入新 Story；不得静默忽略 WIP 限制。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、02_AGILE/PM_KANBAN_BOARD.md。
+
+## 28. Kanban Blocked aging 升级
+
+- **ID**: SC-AGILE-BLK-01
+- **Framework**: Kanban + Agile Delivery
+- **Given**: US-015 在 In Progress 列，状态 Blocked；Blocked 原因是第三方 API 文档缺失；Blocked 日期为 3 天前；US-015 Owner 为 Dev-Alice。
+- **When**: Skill 执行 AGILE 工作流，检测 Blocked 状态 aging。
+- **Then**:
+  1. Skill 检测到 US-015 Blocked 已持续 3 个工作日（超过 1 个工作日阈值）；
+  2. Skill 输出 Escalation: blocked-aging；
+  3. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-AGILE-006，记录 Blocked aging 超限；
+  4. Skill 在 Daily Briefing 中加入 US-015 Blocked 3 天，建议联系第三方负责人获取文档或调整 Sprint；
+  5. Skill 不得将 US-015 的 Story Point 计入当前 Sprint Velocity。
+- **Allow**: 写 Gap、Briefing 标注、升级建议。
+- **Forbid**: 不得将 Blocked Story Point 计入 Velocity；不得静默处理 Blocked 超过 1 工作日。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、00_PM_MEMORY/PM_DAILY_BRIEFING.md。
+
+## 29. Sprint Carry-over 禁止静默滚动
+
+- **ID**: SC-AGILE-CARRY-01
+- **Framework**: Scrum + Agile Delivery
+- **Given**: Sprint 5 结束；US-020（SP=5）在 Sprint 5 内未达到 DoD（集成测试未完成）；PO 确认 US-020 业务价值仍然有效。
+- **When**: Skill 执行 Sprint Review AGILE 工作流，评估 US-020 Carry-over 方案。
+- **Then**:
+  1. Skill 输出 Carry-over Report（US-020 | Sprint 5 | 集成测试未完成 | Sprint 6 re-commit）；
+  2. Skill 必须要求 PO 显式确认 US-020 进入 Sprint 6；
+  3. Skill 必须在 PM_GAP_ANALYSIS.md 写入 GAP-AGILE-007，记录 Carry-over 原因；
+  4. Skill 必须要求 US-020 在 Sprint 6 中重新通过 DoR；
+  5. Skill 不得将 US-020 静默滚动进 Sprint 6 Backlog；
+  6. Skill 不得将 US-020 的 SP=5 计入 Sprint 5 Velocity。
+- **Allow**: 写 Carry-over Report、Gap、要求 PO 确认。
+- **Forbid**: 不得静默滚动 US-020；不得在 Sprint 6 未经 PO 确认重新承诺；不得将未完成 SP 计入 Velocity。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、02_AGILE/PM_SPRINT_REVIEW.md。
+
+## 30. Story 质量缺口识别（五类全覆盖）
+
+- **ID**: SC-AGILE-QUAL-01
+- **Framework**: Scrum + Agile Delivery
+- **Given**: Product Backlog 中存在 US-030；US-030 同时缺 Acceptance Criteria、缺 Story Point、缺 Owner、缺优先级（P0/P1/P2）、缺 Sprint 归属（状态为 Ready 但无 Sprint 编号）。
+- **When**: Skill 执行 AGILE 工作流，对 Product Backlog 执行 Story 质量扫描。
+- **Then**:
+  1. Skill 识别出 US-030 的 5 类缺口：Gap: story-missing-ac、Gap: story-missing-sp、Gap: story-missing-owner、Gap: story-missing-priority、Gap: story-missing-sprint；
+  2. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-AGILE-008，列明 5 类缺口；
+  3. Skill 输出表格：Story ID | 缺口类型 | 建议补充人；
+  4. Skill 不得伪造缺失值（不得自动填入 AC/SP/Owner/优先级/Sprint 编号）；
+  5. Skill 不得将 US-030 纳入 Sprint Planning，直至所有缺口被 PO 关闭。
+- **Allow**: 写 Gap、分析报告。
+- **Forbid**: 不得伪造缺失字段；不得在缺口未关闭时将 US-030 纳入 Sprint。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、02_AGILE/PM_BACKLOG.md。
+
+## 31. 框架自动选择：Kanban（无用户指定）
+
+- **ID**: SC-AGILE-AUTO-01
+- **Framework**: Scrum / Kanban / Hybrid（由 Skill 自动选择）+ Agile Delivery
+- **Given**: 用户消息处理 backlog 中的新需求（无指定框架）；项目无固定 Sprint 节奏；团队采用持续涌现的维护型工作。
+- **When**: Skill 路由到 AGILE 工作流。
+- **Then**:
+  1. Skill 按 agile-delivery-rules.md 9.2 自动选择 Kanban（感知到无固定 Sprint + 维护型工作）；
+  2. Skill 输出 [Framework] 主框架: Kanban | 辅助框架: PMO | Reasoning: 无固定Sprint节奏+维护型工作+持续涌现；
+  3. Skill 继续执行 Kanban 工作流；
+  4. Skill 不请求用户选择 Scrum/Kanban。
+- **Allow**: 写 Kanban Board 更新、Gap（如适用）。
+- **Forbid**: 不得停下来让用户选方法论；不得默认 Scrum 而不说明理由。
+- **Evidence**: 02_AGILE/PM_KANBAN_BOARD.md。
+
+## 32. 框架自动选择：Scrum（感知到活跃 Sprint）
+
+- **ID**: SC-AGILE-AUTO-02
+- **Framework**: Scrum / Kanban / Hybrid（由 Skill 自动选择）+ Agile Delivery
+- **Given**: 用户消息今天的 standup 要说什么（无指定框架）；项目有活跃 Sprint（Sprint 7）；团队有固定 2 周 Sprint 节奏。
+- **When**: Skill 路由到 AGILE 工作流。
+- **Then**:
+  1. Skill 按 agile-delivery-rules.md 9.2 自动选择 Scrum（感知到活跃 Sprint + 固定节奏）；
+  2. Skill 输出 [Framework] 主框架: Scrum | 辅助框架: PMO | Reasoning: 活跃Sprint(Sprint7)+固定2周节奏；
+  3. Skill 继续执行 Scrum Daily Standup 建议工作流；
+  4. Skill 不请求用户选择方法论。
+- **Allow**: 写 Daily Standup 建议、Briefing（如适用）。
+- **Forbid**: 不得停下来让用户选方法论；不得跳过框架声明。
+- **Evidence**: 00_PM_MEMORY/PM_DAILY_BRIEFING.md、02_AGILE/PM_SPRINT_BACKLOG.md。
+
+## 33. Hybrid Phase Gate + Sprint 门禁叠加
+
+- **ID**: SC-AGILE-HYBRID-01
+- **Framework**: Hybrid + Agile Delivery
+- **Given**: 项目使用 Hybrid 模式；Phase 3 = Sprint 9-12；当前 Phase 3 进行中；Sprint 11 Backlog 中包含 BL-030（REQ-055，不在 Approved Scope v1.1 中）。
+- **When**: Skill 执行 AGILE 工作流，进行 Phase Gate 检查和 Scope 一致性检查。
+- **Then**:
+  1. Skill 检测到 BL-030 与 Approved Scope 冲突；
+  2. Skill 输出 Conflict: sprint-scope；
+  3. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-SCP-009；
+  4. Skill 在 PM_PENDING_UPDATES.md 写入 PU-CHG-009，请求 Scope 变更批准；
+  5. Skill 标注 Phase 3 Gate 准入条件：Sprint Backlog 中所有条目必须已在 Approved Scope；
+  6. Skill 在 PM_RAID_LOG.md 写入 R-2026-### 标 scope-creep-hybrid；
+  7. Skill 不得删除 BL-030；不得修改 Approved Scope。
+- **Allow**: 写 Gap、PU、Risk、Gate 标注。
+- **Forbid**: 不得自动删除 BL-030；不得绕过 Phase Gate 检查。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、00_PM_MEMORY/PM_PENDING_UPDATES.md、01_PM_DOCUMENTS/PM_RAID_LOG.md。
+
+## 34. Agile Delivery 术语缺失检测（机器可验证）
+
+- **ID**: SC-AGILE-TERM-01
+- **Framework**: Agile Delivery
+- **Given**: ai-pm-os/references/agile-delivery-rules.md 存在；用户删除了文档中所有 DoR、DoD、WIP、Blocked、Carry-over 术语。
+- **When**: Skill 执行 AGILE 工作流，加载 agile-delivery-rules.md 术语检查。
+- **Then**:
+  1. Skill 检测到 agile-delivery-rules.md 缺少核心敏捷术语；
+  2. Skill 输出 Escalation: agile-terms-missing；
+  3. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-AGILE-TERM-001；
+  4. Skill 停止 Agile Delivery 工作流，直至术语被恢复。
+- **Allow**: 写 Gap、拒绝操作。
+- **Forbid**: 不得在敏捷术语缺失时继续 Agile 工作流。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md。

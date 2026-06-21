@@ -22,6 +22,7 @@
 | 估算 / estimation / 工期 | ESTIMATION | PMP/PMBOK + APM | Estimation Log + Schedule Baseline + Backlog |
 | 缺口 / gap / 缺什么 | GAP | PMO + APM | Gap Analysis + Document Registry + Backlog |
 | 会议建议 / meeting advisory / 建议开会 | MEETING_ADVISORY | PMO + PRINCE2 | Current Status + RAID + Decisions + Pending Approvals |
+| 敏捷治理 / agile / scrum / kanban / sprint / backlog / DoR / DoD / WIP | AGILE | Scrum / Kanban / Hybrid（自动选择）| Backlog + Sprint + agile-delivery-rules.md |
 
 ## 2. 前置门（pre-flight gates）
 
@@ -38,6 +39,7 @@
 | ESTIMATION | 至少 1 条已批准 Requirement / Story / Work Item |
 | GAP | Memory Boot 已完成 |
 | MEETING_ADVISORY | Current Status + RAID + Approvals 可读 |
+| AGILE | 有活跃项目上下文；Backlog / Sprint 文件或敏捷治理请求 |
 
 任一前置未通过，路由必须返回 `Escalation: gate-failed` 并列出缺失项。
 
