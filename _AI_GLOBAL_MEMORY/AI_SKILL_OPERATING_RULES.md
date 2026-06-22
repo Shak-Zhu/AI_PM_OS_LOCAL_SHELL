@@ -9,27 +9,30 @@
 Cursor/Codex 上下文可读材料。正式更新后主动同步 JSON；P0 不使用后台
 监听。生成 Pending Updates 后必须立即请求用户确认。
 
-## 1. 强制执行循环
+## 1. 强制执行循环（memory-and-recovery.md REQUIRED_MEMORY_BOOT_FILES）
 
-1. **Memory Boot**：`_AI_GLOBAL_MEMORY/` 全部 10 个文件 + `00_PM_MEMORY/`
-   全部 9 个模板。
-2. **Skill 入口**：`ai-pm-os/SKILL.md` + 5 个 references + 22 个场景。
+1. **Memory Boot**：`ai-pm-os/references/memory-and-recovery.md` 定义的六层信息源 +
+   严格读取顺序；`REQUIRED_MEMORY_BOOT_FILES` 定义 Global Rules 层 3 文件 + PM Memory 层 6 文件。
+2. **Skill 入口**：`ai-pm-os/SKILL.md` + 7 个 references + 42 个场景。
 3. **意图路由**：`ai-pm-os/references/router.md`。
 4. **框架选择**：`ai-pm-os/references/framework-matrix.md`，显式标注主框架
    与辅助框架。
 5. **事实层级**：`ai-pm-os/references/fact-layers.md`，输出必须标注 `Fact-Layer`。
 6. **稳定性**：`ai-pm-os/references/stability-rules.md`，处理重复 / 冲突 /
    恢复 / 脏工作树。
-7. **场景校验**：`ai-pm-os/scenarios/scenarios.md`，匹配 ≥1 个基准场景。
-8. **失败升级**：见 SKILL.md §5；不得静默重试或越权。
+7. **敏捷交付**：`ai-pm-os/references/agile-delivery-rules.md`，Scrum/Kanban/Hybrid
+   行为规则与语义不变量。
+8. **场景校验**：`ai-pm-os/scenarios/scenarios.md`，匹配 ≥1 个基准场景。
+9. **失败升级**：见 SKILL.md §5；不得静默重试或越权。
 
 ## 2. 验证脚本
 
 - `node scripts/validate-skill.js` 必退出 0。
 - 删除 / 改名 `ai-pm-os/SKILL.md` 中任一必需能力标签 → 退出 1。
-- 删除任一必需 reference → 退出 1。
-- 场景数 < 20 → 退出 1。
+- 删除任一必需 reference（包括新增的 `memory-and-recovery.md`）→ 退出 1。
+- 场景数 < 42 → 退出 1。
 - 出现平台绝对路径 → 退出 1。
+- SI-09~SI-13 任一不满足 → 退出 1。
 
 ## 3. 关键边界
 

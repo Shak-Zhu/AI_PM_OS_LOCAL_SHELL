@@ -585,3 +585,168 @@
 - **Allow**: 写 Gap、拒绝操作。
 - **Forbid**: 不得在敏捷术语缺失时继续 Agile 工作流。
 - **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md。
+
+
+---
+
+## 35. 新会话 Memory Boot（六层读取）
+
+- **ID**: SC-MEM-01
+- **Framework**: PMO + memory-and-recovery
+- **Given**: 用户开启新会话；上一会话在处理 MEETING 工作流中途结束；
+  Active Context 已清空；Skill 启动 Memory Boot。
+- **When**: Skill 执行 Memory Boot 读取 ai-pm-os/references/memory-and-recovery.md。
+- **Then**:
+  1. Skill 按 memory-and-recovery.md §2 定义顺序读取 9 个 Required 文件
+     （Global Rules 层 3 文件 + PM Memory 层 6 文件）；
+  2. Skill 输出 5 个状态字段并标注来源：
+     - 当前阶段 | source: PM_CURRENT_STATUS.md
+     - Scope 状态与版本 | source: PM_SCOPE_BASELINE.md
+     - 活动 WP/Sprint | source: PM_CURRENT_STATUS.md
+     - 阻塞/待审批 | source: PM_PENDING_UPDATES.md + PM_GAP_ANALYSIS.md
+     - 下一安全步骤 | source: router.md §1 + PM_CURRENT_STATUS.md
+  3. Skill 基于 5 字段选择正确下一工作流（不依赖对话残留记忆）。
+- **Allow**: 输出 Memory Recovery 格式；刷新 PM_ACTIVE_CONTEXT.md。
+- **Forbid**: 不得依赖聊天窗口残留记忆；不得跳过 Memory Boot 直接执行；
+  不得在 Required 文件缺失时猜测并继续。
+- **Evidence**: ai-pm-os/references/memory-and-recovery.md、00_PM_MEMORY/PM_CURRENT_STATUS.md。
+
+## 36. 上下文压缩后恢复
+
+- **ID**: SC-MEM-02
+- **Framework**: PMO + memory-and-recovery
+- **Given**: Cursor/Codex 上下文窗口被压缩（超过 50 条消息截断）；
+  Skill 在处理 AGILE 工作流中途失去上下文；用户重新打开会话。
+- **When**: Skill 启动 Memory Boot 并执行恢复。
+- **Then**:
+  1. Skill 读取 PM_CURRENT_STATUS.md 和 PM_ACTIVE_CONTEXT.md；
+  2. Skill 发现 pending_writes 非空，但 Active Context 无法重建完整步骤；
+  3. Skill 执行 preflight：检查 pending_writes 目标文件是否已存在；
+  4. Skill 判定 resume / restart / escalate：
+     - 若目标文件未冲突且可读 --> resume 从第一项继续
+     - 若目标文件已存在冲突 --> 输出 Conflict + Gap
+     - 若无法重建 --> escalate
+  5. Skill 不得猜测上一动作。
+- **Allow**: 写 Conflict + Gap；写新的 PM_ACTIVE_CONTEXT.md。
+- **Forbid**: 不得猜测上一动作；不得重复应用已完成的写入；
+  不得自动 commit。
+- **Evidence**: 00_PM_MEMORY/PM_ACTIVE_CONTEXT.md、00_PM_MEMORY/PM_GAP_ANALYSIS.md。
+
+## 37. 缺 Required Memory 文件
+
+- **ID**: SC-MEM-03
+- **Framework**: PMO + memory-and-recovery
+- **Given**: 00_PM_MEMORY/PM_DOCUMENT_REGISTRY.md 因磁盘损坏不存在；
+  用户调用 /ai-pm-os 今日 briefing。
+- **When**: Skill 执行 Memory Boot，读取 Required 文件列表第 7 项。
+- **Then**:
+  1. Skill 检测到 PM_DOCUMENT_REGISTRY.md 缺失；
+  2. Skill 输出 Escalation: memory-boot-failure；
+  3. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-MEM-001；
+  4. Skill 停止执行本次工作流；
+  5. Skill 不得猜测 PM_DOCUMENT_REGISTRY.md 内容并继续。
+- **Allow**: 写 Gap；提示用户提供备份或重建。
+- **Forbid**: 不得猜测缺失文件内容；不得跳过 Required 文件继续执行；
+  不得在缺 Required 文件时写入正式文件。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、ai-pm-os/references/memory-and-recovery.md。
+
+## 38. 损坏 Active Context 重建
+
+- **ID**: SC-MEM-04
+- **Framework**: PMO + memory-and-recovery
+- **Given**: PM_ACTIVE_CONTEXT.md 存在但内容为乱码（编码损坏）；
+  Skill 处于 AGILE 工作流执行中途。
+- **When**: Skill 读取 Active Context 并尝试解析。
+- **Then**:
+  1. Skill 检测到 PM_ACTIVE_CONTEXT.md 无法解析（编码错误或乱码）；
+  2. Skill 从 L1/L2 正式文件重建 Active Context：
+     - 当前阶段 from PM_CURRENT_STATUS.md
+     - Scope 状态 from PM_SCOPE_BASELINE.md
+     - 活动 WP/Sprint from PM_CURRENT_STATUS.md
+     - 阻塞/待审批 from PM_PENDING_UPDATES.md
+  3. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-MEM-002，标注 Active Context 损坏；
+  4. Skill 不得从对话记忆补全 Active Context 内容。
+- **Allow**: 写 Gap；重建 PM_ACTIVE_CONTEXT.md（从 L1/L2，非对话记忆）。
+- **Forbid**: 不得从对话记忆补全 Active Context；不得将损坏的 Active Context
+  内容当作有效状态。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、00_PM_MEMORY/PM_ACTIVE_CONTEXT.md。
+
+## 39. 过期上下文冲突
+
+- **ID**: SC-MEM-05
+- **Framework**: PMO + memory-and-recovery
+- **Given**: PM_ACTIVE_CONTEXT.md 中记录的 active_workflow = MEETING，
+  且 updated_at 为 3 天前；
+  PM_CURRENT_STATUS.md 记录的当前阶段为 ACTIVE（非 MEETING）。
+- **When**: Skill 读取 Active Context 并对比 Hot Memory。
+- **Then**:
+  1. Skill 检测到 Active Context 已过期（updated_at 超过 1 小时阈值）；
+  2. Skill 检测到 active_workflow 与 PM_CURRENT_STATUS.md 不一致；
+  3. Skill 以 PM_CURRENT_STATUS.md（L2）为准重建 Active Context；
+  4. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-MEM-003；
+  5. Skill 不得以过期的 Active Context 为准继续 MEETING 工作流。
+- **Allow**: 重建 Active Context；写 Gap。
+- **Forbid**: 不得以过期 Active Context 覆盖 L2 正式状态；
+  不得继续执行与当前阶段不一致的工作流。
+- **Evidence**: 00_PM_MEMORY/PM_ACTIVE_CONTEXT.md、00_PM_MEMORY/PM_CURRENT_STATUS.md。
+
+## 40. 写入前中断
+
+- **ID**: SC-MEM-06
+- **Framework**: PMO + memory-and-recovery
+- **Given**: Skill 在执行 INTAKE 工作流时，pending_writes 包含 3 个目标文件；
+  Skill 完成了 preflight 检查，但在写入第一个文件前网络中断。
+- **When**: Skill 在新会话中恢复。
+- **Then**:
+  1. Skill 读取 PM_ACTIVE_CONTEXT.md，发现 pending_writes = [F1, F2, F3]；
+  2. Skill 执行 preflight：对 F1、F2、F3 逐一检查脏工作树冲突；
+  3. 若 F1 与脏工作树冲突：
+     - Skill 输出 Conflict: worktree
+     - Skill 不得继续写入 F1
+     - Skill 评估 F2、F3 是否可写入（基于 preflight 结果）
+  4. Skill 不得重新猜测 pending_writes 内容。
+- **Allow**: 写 Conflict；重建 pending_writes 清单。
+- **Forbid**: 不得猜测上一写入动作；不得跳过 preflight；
+  不得在脏工作树冲突时继续写入。
+- **Evidence**: 00_PM_MEMORY/PM_ACTIVE_CONTEXT.md、00_PM_MEMORY/PM_GAP_ANALYSIS.md。
+
+## 41. 写入中部分失败
+
+- **ID**: SC-MEM-07
+- **Framework**: PMO + memory-and-recovery
+- **Given**: PU-### 已批准；含 3 个目标文件（F1、F2、F3）；
+  Skill 成功写入 F1 和 F2，但在写入 F3 时磁盘空间不足导致失败。
+- **When**: Skill 在 APPLY 工作流中执行部分失败恢复。
+- **Then**:
+  1. Skill 检测到 F3 写入失败（磁盘空间不足）；
+  2. Skill 执行 preflight：检查 F1、F2 是否与脏工作树冲突；
+  3. Skill 不得继续写入 F3；
+  4. Skill 记录已写入文件（F1、F2）和失败文件（F3）；
+  5. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-MEM-004；
+  6. Skill 不得将 F1、F2 回滚（已成功写入）；
+  7. Skill 不得自动 git commit（写入中断）。
+- **Allow**: 写 Gap；输出冲突报告；建议用户解决磁盘空间后重试 F3。
+- **Forbid**: 不得继续写入失败文件；不得回滚已写入文件；
+  不得静默忽略部分失败；不得自动 commit。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、01_PM_DOCUMENTS/PM_RAID_LOG.md。
+
+## 42. 审批等待恢复
+
+- **ID**: SC-MEM-08
+- **Framework**: PMO + memory-and-recovery
+- **Given**: PU-### 状态为 Proposed；Skill 在请求用户批准后中断；
+  新会话中，PM_ACTIVE_CONTEXT.md 记录 pending_approvals = [PU-###]；
+  但 PM_PENDING_UPDATES.md 中 PU-### 仍未被批准。
+- **When**: Skill 在新会话中恢复，判断下一步。
+- **Then**:
+  1. Skill 读取 PM_ACTIVE_CONTEXT.md 和 PM_PENDING_UPDATES.md；
+  2. Skill 检测到 PU-### 在 pending_approvals 中但状态仍为 Proposed；
+  3. Skill 维持当前工作流（不重复执行原工作流）；
+  4. Skill 在 briefing 或 output 中提示待审批：PU-###；
+  5. Skill 不得将 PU-### 状态从 Proposed 改为 Approved；
+  6. Skill 不得将 pending_approvals 清空直至用户显式批准。
+- **Allow**: 提示待审批 PU；维持当前工作流状态。
+- **Forbid**: 不得用 Active Context 自动批准 PU；
+  不得清空 pending_approvals 直至显式批准；
+  不得重复执行原工作流（PU 内容不变）。
+- **Evidence**: 00_PM_MEMORY/PM_PENDING_UPDATES.md、00_PM_MEMORY/PM_ACTIVE_CONTEXT.md。

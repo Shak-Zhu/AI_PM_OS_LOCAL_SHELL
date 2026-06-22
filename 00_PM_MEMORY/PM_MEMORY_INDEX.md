@@ -23,7 +23,8 @@
 | 文档注册表 | `00_PM_MEMORY/PM_DOCUMENT_REGISTRY.md` | Active | 是 |
 | 完整文件清单 | `00_PM_MEMORY/PM_DOCUMENT_INVENTORY.md` | Active | 否 |
 | 输入日志 | `00_PM_MEMORY/PM_INPUT_LOG.md` | Active | 是 |
-| Pending Updates | `00_PM_MEMORY/PM_PENDING_UPDATES.md` | Active | 是 |
+| Active Context | `00_PM_MEMORY/PM_ACTIVE_CONTEXT.md` | Active | 是（Memory Boot 第 9 步）|
+| Pending Updates | `00_PM_MEMORY/PM_PENDING_UPDATES.md` | Active | 是（Memory Boot Conditional）|
 | 缺口分析 | `00_PM_MEMORY/PM_GAP_ANALYSIS.md` | Active | 是 |
 | 项目章程 | `01_PM_DOCUMENTS/PM_PROJECT_BRIEF.md` | Pending Review | 是 |
 | 需求登记册 | `01_PM_DOCUMENTS/PM_REQUIREMENTS_REGISTER.md` | Pending Review | 是 |

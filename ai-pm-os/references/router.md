@@ -7,7 +7,7 @@
 
 | 意图关键词（中文 / 英文） | 工作流 | 主框架 | 必读 |
 |---|---|---|---|
-| 初始化 / initialize / 启动项目 | INIT | Hybrid + PMO | Memory Boot + Scope Baseline + Project Brief |
+| 初始化 / initialize / 启动项目 | INIT | Hybrid + PMO | Memory Boot + memory-and-recovery.md + Scope Baseline + Project Brief |
 | 处理新材料 / process material / intake | INTAKE | PMP/PMBOK | Input Log + Active Context + RAID |
 | 处理 transcript / meeting transcript / 会议纪要 | MEETING | PMP/PMBOK + PMO | Meeting Index + RAID + Decisions + Pending Updates |
 | 今日 briefing / what should I do | BRIEFING | PMO + PMP/PMBOK | Current Status + To-do + RAID + Approvals |

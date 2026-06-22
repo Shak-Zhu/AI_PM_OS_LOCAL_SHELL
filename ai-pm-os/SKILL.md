@@ -63,9 +63,9 @@ target_agents: [Cursor, Codex]
 
 每次执行必须严格按以下六步推进，不得跳步：
 
-1. **Memory Boot**：读取 `_AI_GLOBAL_MEMORY/`（SKILL 规则、用户偏好、命名规范、
-   PM 输出标准、报告规则、治理规则、估算规则、纪要规则、会议建议规则、
-   Dashboard 风格规则）以及 `00_PM_MEMORY/` 全部 9 个模板文件。
+1. **Memory Boot**：读取 `ai-pm-os/references/memory-and-recovery.md` 定义的六层信息源与
+   严格读取顺序；`REQUIRED_MEMORY_BOOT_FILES` 定义 Global Rules 层（3 文件）+
+   PM Memory 层（6 文件），详见 memory-and-recovery.md §2。
 2. **Intent Routing**：识别用户意图，对照 `references/router.md` 选择工作流。
    若无法路由，输出 `Gap：unrouted intent` 并停止，不得自行猜测。
 3. **Pre-flight Check**：依据所选工作流读取对应权威文件、检查前置门
@@ -164,13 +164,16 @@ target_agents: [Cursor, Codex]
 
 ## 7. 行为场景
 
-≥20 个 Given / When / Then 行为场景见 `scenarios/scenarios.md`，覆盖：
+≥42 个 Given / When / Then 行为场景见 `scenarios/scenarios.md`，覆盖：
 
 - 4 个专业框架组合（PMBOK / PRINCE2 / APM / PMO / Scrum / Kanban / Hybrid）
 - 4 个审批与权限（PU 绕过、Approved Baseline 覆盖、Sprint / Scope 冲突、Owner 缺失）
 - 4 个冲突与混乱（Markdown / JSON 冲突、重复材料、过期 Action、脏工作树）
 - 4 个重复与恢复（同一初始化 3 次、重复 transcript、Missing 材料、中断恢复）
 - 4 个跨 Agent 与输出一致性
+- 8 个 Memory / Recovery 场景
+
+合计 42 个场景。
 
 ## 8. 安装与调用
 

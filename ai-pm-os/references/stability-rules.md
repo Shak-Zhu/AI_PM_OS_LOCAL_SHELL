@@ -129,9 +129,9 @@
 - 跨 Agent 差异检测：每月自动跑一次 `scripts/validate-skill.js` + 关键
   场景回归；任何差异在 `pm-ai-reviews/` 登记。
 
-## 10. 验收场景覆盖要求
+## 验收场景覆盖要求
 
-`scenarios/scenarios.md` 至少须覆盖以下 8 类异常：
+`scenarios/scenarios.md` 至少须覆盖以下 9 类异常：
 
 1. 同一初始化连续 3 次（幂等）
 2. 重复材料 / 重复 transcript（去重 + superseded）
@@ -141,5 +141,6 @@
 6. 未批变更（覆盖 Approved Baseline 拒绝 / Sprint-Scope 冲突拒绝）
 7. 不可读输入（received-but-unreadable + Gap）
 8. Markdown/JSON 冲突（Markdown 权威）
+9. Memory / Recovery（Memory Boot、上下文压缩、缺失 Required 文件、损坏 Active Context、过期冲突、写入中断、部分失败、审批等待）
 
 任何未覆盖视为稳定性不足。

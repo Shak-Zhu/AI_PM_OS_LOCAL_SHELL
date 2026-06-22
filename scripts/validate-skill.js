@@ -21,6 +21,10 @@ const path = require('path');
 
 // --- Configuration ---
 
+// WP-004: Single source of truth for scenario count. All heading/ID/block
+// and Phase 3 checks reference this constant. No scattered magic numbers.
+const EXPECTED_SCENARIO_COUNT = 42;
+
 // Required files inside the ai-pm-os/ package
 const REQUIRED_FILES = [
   'ai-pm-os/SKILL.md',
@@ -30,6 +34,7 @@ const REQUIRED_FILES = [
   'ai-pm-os/references/stability-rules.md',
   'ai-pm-os/references/install-and-invoke.md',
   'ai-pm-os/references/agile-delivery-rules.md',
+  'ai-pm-os/references/memory-and-recovery.md',
   'ai-pm-os/scenarios/scenarios.md',
 ];
 
@@ -219,18 +224,18 @@ function checkScenarioHeadings(baseDir) {
   const rawHeadingCount = lines.reduce((count, line) => {
     return count + (/^## (\d+)\./.test(line) ? 1 : 0);
   }, 0);
-  if (rawHeadingCount !== 34) {
-    errors.push('HEADING COUNT: found ' + rawHeadingCount + ' headings, exactly 34 required');
+  if (rawHeadingCount !== EXPECTED_SCENARIO_COUNT) {
+    errors.push('HEADING COUNT: found ' + rawHeadingCount + ' headings, exactly ' + EXPECTED_SCENARIO_COUNT + ' required');
   }
 
-  // (b) Each heading number must be in 1..34; no extra numbers
+  // (b) Each heading number must be in 1..N; no extra numbers
   let lastHeadingNum = 0;
   for (let i = 0; i < lines.length; i++) {
     const m = lines[i].match(/^## (\d+)\./);
     if (m) {
       const n = parseInt(m[1], 10);
-      if (n < 1 || n > 34) {
-        errors.push('HEADING NUMBER: ## ' + n + ' at line ' + (i + 1) + ' is outside valid range 1..34');
+      if (n < 1 || n > EXPECTED_SCENARIO_COUNT) {
+        errors.push('HEADING NUMBER: ## ' + n + ' at line ' + (i + 1) + ' is outside valid range 1..' + EXPECTED_SCENARIO_COUNT);
       }
       if (n <= lastHeadingNum) {
         errors.push('HEADING ORDER: ## ' + n + ' at line ' + (i + 1) + ' is not strictly ascending (previous: ## ' + lastHeadingNum + ')');
@@ -242,8 +247,8 @@ function checkScenarioHeadings(baseDir) {
   // (c) Count raw ID occurrences in the whole document (NOT Set)
   const rawIdMatches = content.match(/\- \*\*ID\*\*:\s*(SC-[A-Z0-9\-]+)/g) || [];
   const rawIdCount = rawIdMatches.length;
-  if (rawIdCount !== 34) {
-    errors.push('ID RAW COUNT: found ' + rawIdCount + ' IDs in document, exactly 34 required');
+  if (rawIdCount !== EXPECTED_SCENARIO_COUNT) {
+    errors.push('ID RAW COUNT: found ' + rawIdCount + ' IDs in document, exactly ' + EXPECTED_SCENARIO_COUNT + ' required');
   }
 
   // (d) Count unique IDs — array-based duplicate detection (NOT Set掩盖)
@@ -258,8 +263,8 @@ function checkScenarioHeadings(baseDir) {
       uniqueIds.push(id);
     }
   }
-  if (uniqueIds.length !== 34) {
-    errors.push('ID UNIQUE COUNT: found ' + uniqueIds.length + ' unique IDs, exactly 34 required');
+  if (uniqueIds.length !== EXPECTED_SCENARIO_COUNT) {
+    errors.push('ID UNIQUE COUNT: found ' + uniqueIds.length + ' unique IDs, exactly ' + EXPECTED_SCENARIO_COUNT + ' required');
   }
 
   // (e) Per-heading-block parsing: each heading block contains exactly 1 ID
@@ -666,7 +671,336 @@ function checkSemanticInvariant08(baseDir) {
   return errors;
 }
 
-// --- Main ---
+/**
+ * SI-09: Memory Boot order (WP-004-R2)
+ *
+ * STRUCTURED PARSING APPROACH (QC-F-021/022 fix):
+ * Instead of counting how many canonical names appear anywhere in a document (includes()),
+ * this function:
+ *   (1) Parses the §2.1 numbered list into an actual array of full path strings
+ *   (2) Compares that parsed array to the canonical REQUIRED_MEMORY_BOOT_FILES array
+ *       for EXACT equality: same length, same values, same order, no extras, no duplicates
+ *   (3) Same structured parsing for AGENTS.md startup list
+ *   (4) Reports specific errors for each failure mode (extra, missing, duplicate, out-of-order)
+ *
+ * QC-F-021: Duplicate canonical entry was not rejected by includes()-based count.
+ * QC-F-022: Extra non-canonical entry was not rejected.
+ * QC-F-023: Each pollution pattern must trigger independently (handled in SI-10d).
+ */
+function checkSemanticInvariant09(baseDir) {
+  const mrPath = path.join(baseDir, 'ai-pm-os', 'references', 'memory-and-recovery.md');
+  const mrContent = readSafe(mrPath) || '';
+  const agentsPath = path.join(baseDir, 'AGENTS.md');
+  const agentsContent = readSafe(agentsPath) || '';
+  const skillPath = path.join(baseDir, 'ai-pm-os', 'SKILL.md');
+  const skillContent = readSafe(skillPath) || '';
+  const rulesPath = path.join(baseDir, '_AI_GLOBAL_MEMORY', 'AI_SKILL_OPERATING_RULES.md');
+  const rulesContent = readSafe(rulesPath) || '';
+  const errors = [];
+
+  if (!mrContent.includes('六层')) {
+    errors.push('SI-09a: memory-and-recovery.md missing six-layer authority definition');
+  }
+
+  // Canonical list (full path strings in order)
+  const canonical = [
+    '_AI_GLOBAL_MEMORY/AI_SKILL_OPERATING_RULES.md',
+    '_AI_GLOBAL_MEMORY/AI_USER_PREFERENCES.md',
+    '_AI_GLOBAL_MEMORY/AI_NAMING_CONVENTIONS.md',
+    '00_PM_MEMORY/PM_MEMORY_INDEX.md',
+    '00_PM_MEMORY/PM_CURRENT_STATUS.md',
+    '00_PM_MEMORY/PM_APPROVAL_STATUS.md',
+    '00_PM_MEMORY/PM_DOCUMENT_REGISTRY.md',
+    '00_PM_MEMORY/PM_INPUT_LOG.md',
+    '00_PM_MEMORY/PM_ACTIVE_CONTEXT.md',
+  ];
+
+  // --- (A) Parse memory-and-recovery.md §2.1 numbered list ---
+  // QC-F-025 fix: fail-closed on anchor/section errors.
+  const mrBootStart = mrContent.indexOf('Global Rules 层（先于一切）');
+  const mrBootEnd = mrContent.indexOf('\n**Conditional 文件（按需读取）**');
+  if (mrBootStart < 0) {
+    errors.push('SI-09b: memory-and-recovery.md §2.1 start anchor "Global Rules 层（先于一切）" not found');
+  }
+  if (mrBootEnd < 0) {
+    errors.push('SI-09c: memory-and-recovery.md §2.1 end anchor "**Conditional 文件" not found');
+  }
+  if (mrBootStart >= 0 && mrBootEnd >= 0 && mrBootEnd <= mrBootStart) {
+    errors.push('SI-09d: memory-and-recovery.md §2.1 end anchor appears before or at start anchor');
+  }
+  if (mrBootStart >= 0 && mrBootEnd > mrBootStart) {
+    const mrSection = mrContent.substring(mrBootStart, mrBootEnd);
+    const mrLines = mrSection.split('\n');
+
+    // Extract numbered list entries: "N. `path` — description"
+    const mrParsed = [];
+    for (const line of mrLines) {
+      const m = line.match(/^\s*(\d+)\.\s+`([^`]+)`/);
+      if (m) {
+        mrParsed.push(m[2]); // full path string
+      }
+    }
+
+    // (a) Check length equality
+    if (mrParsed.length !== 9) {
+      errors.push('SI-09e: memory-and-recovery.md §2.1 has ' + mrParsed.length + '/9 items (must be exactly 9)');
+    }
+
+    // (b) Check no extra/non-canonical entries (逐项精确相等)
+    if (mrParsed.length === 9) {
+      for (let i = 0; i < 9; i++) {
+        if (mrParsed[i] !== canonical[i]) {
+          errors.push('SI-09f: memory-and-recovery.md §2.1 item ' + (i + 1) + ' is "' + mrParsed[i] + '", expected "' + canonical[i] + '"');
+        }
+      }
+    }
+  }
+
+  // --- (B) Parse AGENTS.md startup list ---
+  // QC-F-025 fix: scope to "启动顺序" section, fail-closed on boundary errors.
+  const agentsSectionStart = agentsContent.indexOf('## 启动顺序');
+  const agentsSectionEnd = agentsContent.indexOf('\n##', agentsSectionStart + 1);
+  if (agentsSectionStart < 0) {
+    errors.push('SI-09g: AGENTS.md startup section start "## 启动顺序" not found');
+  }
+  if (agentsSectionStart >= 0 && agentsSectionEnd < 0) {
+    // No next ## heading; use rest of file from section start
+    errors.push('SI-09h: AGENTS.md startup section end marker not found');
+  }
+  if (agentsSectionStart >= 0 && agentsSectionEnd >= 0 && agentsSectionEnd <= agentsSectionStart) {
+    errors.push('SI-09i: AGENTS.md startup section end appears before or at start');
+  }
+  if (agentsSectionStart >= 0 && agentsSectionEnd > agentsSectionStart) {
+    const agentsSection = agentsContent.substring(agentsSectionStart, agentsSectionEnd);
+    const agentsLines = agentsSection.split('\n');
+    const agentsParsed = [];
+    for (const line of agentsLines) {
+      // AGENTS has: "N. `path`"
+      const m = line.match(/^\s*(\d+)\.\s+`([^`]+)`/);
+      if (m) {
+        agentsParsed.push(m[2]);
+      }
+    }
+
+    // (a) Check length equality
+    if (agentsParsed.length !== 9) {
+      errors.push('SI-09j: AGENTS.md startup section has ' + agentsParsed.length + '/9 items (must be exactly 9)');
+    }
+
+    // (b) Check no extra/non-canonical entries AND same order (逐项精确相等)
+    if (agentsParsed.length === 9) {
+      for (let i = 0; i < 9; i++) {
+        if (agentsParsed[i] !== canonical[i]) {
+          errors.push('SI-09k: AGENTS.md item ' + (i + 1) + ' is "' + agentsParsed[i] + '", expected "' + canonical[i] + '"');
+        }
+      }
+    }
+  }
+
+  // --- (C) Strict reading order marker ---
+  if (!/读取顺序|严格顺序/.test(mrContent)) {
+    errors.push('SI-09l: memory-and-recovery.md missing strict Memory Boot reading order marker');
+  }
+
+  // --- (D) SKILL.md and rules canonical reference ---
+  if (!/REQUIRED_MEMORY_BOOT_FILES|memory-and-recovery.*Memory Boot|PM Memory.*Global Rules.*3.*6/.test(skillContent)) {
+    errors.push('SI-09m: SKILL.md missing REQUIRED_MEMORY_BOOT_FILES / canonical Memory Boot reference');
+  }
+  if (!/REQUIRED_MEMORY_BOOT_FILES|memory-and-recovery.*Memory Boot|PM Memory.*Global Rules.*3.*6/.test(rulesContent)) {
+    errors.push('SI-09n: AI_SKILL_OPERATING_RULES.md missing REQUIRED_MEMORY_BOOT_FILES / canonical Memory Boot reference');
+  }
+
+  // --- (E) "3 Global + 6 PM Memory" count label ---
+  if (!/3.*Global.*6.*PM Memory|Global Rules.*PM Memory.*3.*6/.test(mrContent)) {
+    errors.push('SI-09o: memory-and-recovery.md missing "3 Global + 6 PM Memory" count label');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-10: Recovery 5-field source requirement (WP-004)
+ *
+ * PASSES when:
+ *   (a) memory-and-recovery.md §3 defines exactly 5 recovery fields AND
+ *   (b) each field has a source: annotation AND
+ *   (c) missing source is marked as "Unknown"
+ *
+ * FAILS when:
+ *   (a) §3 defines fewer than 5 fields OR
+ *   (b) a field lacks source: annotation OR
+ *   (c) missing source is not marked as Unknown
+ */
+function checkSemanticInvariant10(baseDir) {
+  const mrPath = path.join(baseDir, 'ai-pm-os', 'references', 'memory-and-recovery.md');
+  const mrContent = readSafe(mrPath) || '';
+  const errors = [];
+
+  // Must define 5 recovery fields with source: annotations
+  const fieldTerms = ['当前阶段', 'Scope 状态', '活动 WP', '阻塞', '下一安全步骤'];
+  let fieldCount = 0;
+  for (const term of fieldTerms) {
+    if (mrContent.includes(term)) fieldCount++;
+  }
+  if (fieldCount < 5) {
+    errors.push('SI-10a: memory-and-recovery.md §3 defines only ' + fieldCount + '/5 recovery fields');
+  }
+
+  if (!/source:|来源文件|来源:/.test(mrContent)) {
+    errors.push('SI-10b: memory-and-recovery.md §3 missing source: annotations for recovery fields');
+  }
+
+  if (!/Unknown|未知/.test(mrContent)) {
+    errors.push('SI-10c: memory-and-recovery.md §3 missing "Unknown" marker for missing source');
+  }
+
+  // QC-F-023/026 fix: Each pollution pattern triggers independently (no cascading conditions).
+  // Scope to §3.3 example block only. Any ONE of these patterns alone is enough to fail.
+  // QC-F-026 fix: Find the next heading AFTER "### 3.3", not the first heading in the entire doc.
+  const sec3idx = mrContent.indexOf('### 3.3');
+  // Start searching AFTER sec3idx so we find the NEXT heading, not the first one
+  const searchAfter = mrContent.indexOf('\n### 3.3') + 1;
+  const nextHeadingIdx = mrContent.indexOf('\n### ', searchAfter);
+  // Also check for ## headings as section boundaries
+  const nextH2Idx = mrContent.indexOf('\n## ', searchAfter);
+  // Use whichever comes first (h3 or h2) as the end of the §3.3 block
+  const sec4idx = (nextHeadingIdx >= 0 && nextH2Idx >= 0) ? Math.min(nextHeadingIdx, nextH2Idx)
+    : (nextHeadingIdx >= 0 ? nextHeadingIdx : nextH2Idx);
+  const sec3 = (sec3idx >= 0)
+    ? ((sec4idx >= 0 && sec4idx > sec3idx) ? mrContent.substring(sec3idx, sec4idx) : mrContent.substring(sec3idx))
+    : '';
+  if (sec3) {
+    // Pattern 1: concrete WP-### (not placeholder WP-###)
+    if (/\bWP-\d{3}\b/.test(sec3)) {
+      errors.push('SI-10d1: §3.3 contains concrete WP-### (WP-\\d{3}): must use placeholder WP-###');
+    }
+    // Pattern 2: concrete Approved version (not placeholder vX.Y)
+    if (/Approved v\d+\.\d+/.test(sec3)) {
+      errors.push('SI-10d2: §3.3 contains concrete Approved version (v\\d+.\\d+): must use placeholder vX.Y');
+    }
+    // Pattern 3: concrete Sprint number (not placeholder Sprint N)
+    if (/\bSprint \d+/.test(sec3)) {
+      errors.push('SI-10d3: §3.3 contains concrete Sprint number: must use placeholder Sprint N');
+    }
+    // Pattern 4: concrete date (YYYY-MM-DD format)
+    if (/\b\d{4}-\d{2}-\d{2}\b/.test(sec3)) {
+      errors.push('SI-10d4: §3.3 contains a date value (YYYY-MM-DD): must use placeholder YYYY-MM-DD');
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-11: Active Context does not override Approved Baseline (WP-004)
+ *
+ * PASSES when:
+ *   (a) memory-and-recovery.md §1.3 explicitly forbids Active Context overriding L1/L2 AND
+ *   (b) PM_ACTIVE_CONTEXT.md template contains no Approved status field
+ *
+ * FAILS when:
+ *   (a) no explicit prohibition in memory-and-recovery.md OR
+ *   (b) PM_ACTIVE_CONTEXT.md contains an Approved field
+ */
+function checkSemanticInvariant11(baseDir) {
+  const mrPath = path.join(baseDir, 'ai-pm-os', 'references', 'memory-and-recovery.md');
+  const mrContent = readSafe(mrPath) || '';
+  const acPath = path.join(baseDir, '00_PM_MEMORY', 'PM_ACTIVE_CONTEXT.md');
+  const acContent = readSafe(acPath) || '';
+  const errors = [];
+
+  if (!/Active Context.*不得覆盖|不得覆盖.*Approved Baseline|禁止 Active Context 覆盖/.test(mrContent)) {
+    errors.push('SI-11a: memory-and-recovery.md §1.3 missing explicit prohibition of Active Context overriding Baseline');
+  }
+
+  // PM_ACTIVE_CONTEXT.md template must NOT contain an Approved field
+  if (/Approved|approved|已批准/.test(acContent)) {
+    errors.push('SI-11b: PM_ACTIVE_CONTEXT.md template contains an Approved field (violates Active Context authority)');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-12: Partial failure recovery rules (WP-004)
+ *
+ * PASSES when:
+ *   (a) memory-and-recovery.md §5.1 defines write partial failure scenario AND
+ *   (b) preflight check is defined AND
+ *   (c) forbidden actions are defined AND
+ *   (d) next safe step is defined AND
+ *   (e) evidence path includes PM_GAP_ANALYSIS.md
+ *
+ * FAILS when:
+ *   (a) partial failure recovery is not defined OR
+ *   (b) any of preflight/forbidden/next-step is missing
+ */
+function checkSemanticInvariant12(baseDir) {
+  const mrPath = path.join(baseDir, 'ai-pm-os', 'references', 'memory-and-recovery.md');
+  const mrContent = readSafe(mrPath) || '';
+  const errors = [];
+
+  if (!/写入中部分失败|部分失败/.test(mrContent)) {
+    errors.push('SI-12a: memory-and-recovery.md §5 missing write partial failure definition');
+  }
+
+  if (!/preflight|写入前检查/.test(mrContent)) {
+    errors.push('SI-12b: memory-and-recovery.md §5 missing preflight check for partial failure');
+  }
+
+  if (!/禁止继续写入|不得继续/.test(mrContent)) {
+    errors.push('SI-12c: memory-and-recovery.md §5 missing forbidden actions for partial failure');
+  }
+
+  if (!/下一安全步骤|冲突报告/.test(mrContent)) {
+    errors.push('SI-12d: memory-and-recovery.md §5 missing next safe step for partial failure');
+  }
+
+  if (!/PM_GAP_ANALYSIS\.md/.test(mrContent)) {
+    errors.push('SI-12e: memory-and-recovery.md §5 missing PM_GAP_ANALYSIS.md as partial failure evidence');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-13: Missing Required Memory file fail-safe (WP-004)
+ *
+ * PASSES when:
+ *   (a) memory-and-recovery.md §2.2 defines Required file missing handling AND
+ *   (b) Skill stops execution AND
+ *   (c) outputs Escalation: memory-boot-failure AND
+ *   (d) writes Gap AND
+ *   (e) does NOT guess and continue
+ *
+ * FAILS when:
+ *   (a) Required file missing handling is not defined OR
+ *   (b) Skill does not stop OR
+ *   (c) no Escalation output or Gap is written
+ */
+function checkSemanticInvariant13(baseDir) {
+  const mrPath = path.join(baseDir, 'ai-pm-os', 'references', 'memory-and-recovery.md');
+  const mrContent = readSafe(mrPath) || '';
+  const errors = [];
+
+  if (!/Required.*文件.*缺失|缺失.*Required/.test(mrContent)) {
+    errors.push('SI-13a: memory-and-recovery.md §2 missing Required file missing handling');
+  }
+
+  if (!/停止执行|必须停止/.test(mrContent)) {
+    errors.push('SI-13b: memory-and-recovery.md §2 does not require Skill to stop on Required file missing');
+  }
+
+  if (!/Escalation.*memory-boot-failure|memory-boot-failure/.test(mrContent)) {
+    errors.push('SI-13c: memory-and-recovery.md §2 missing Escalation: memory-boot-failure');
+  }
+
+  if (!/Gap.*写入|不得猜测|不得继续/.test(mrContent)) {
+    errors.push('SI-13d: memory-and-recovery.md §2 missing Gap write / no-guess requirement');
+  }
+
+  return errors;
+}
 
 function main() {
   const baseDir = path.resolve(__dirname, '..');
@@ -703,8 +1037,8 @@ function main() {
   console.log('[Phase 3] Checking scenario structure...');
   const sc = checkScenarios(baseDir);
   console.log('  Total scenarios: ' + sc.total);
-  if (sc.total < 34) {
-    console.log('  FAIL: at least 34 scenarios required, found ' + sc.total);
+  if (sc.total < EXPECTED_SCENARIO_COUNT) {
+    console.log('  FAIL: at least ' + EXPECTED_SCENARIO_COUNT + ' scenarios required, found ' + sc.total);
     totalErrors += 1;
   } else if (sc.errors.length === 0) {
     console.log('  OK: all scenarios contain Given/When/Then/Allow/Forbid/Evidence');
@@ -718,7 +1052,7 @@ function main() {
   // Phase 3b: Check scenario heading sequentiality (R2 requirement)
   const headingErrors = checkScenarioHeadings(baseDir);
   if (headingErrors.length === 0) {
-    console.log('  OK: all 34 scenario headings present (## 1..## 34) with sequential correspondence');
+    console.log('  OK: all ' + EXPECTED_SCENARIO_COUNT + ' scenario headings present (## 1..## ' + EXPECTED_SCENARIO_COUNT + ') with sequential correspondence');
   } else {
     for (const e of headingErrors) {
       console.log('  HEADING ERROR: ' + e);
@@ -778,7 +1112,12 @@ function main() {
   const si06 = checkSemanticInvariant06(baseDir);
   const si07 = checkSemanticInvariant07(baseDir);
   const si08 = checkSemanticInvariant08(baseDir);
-  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08);
+  const si09 = checkSemanticInvariant09(baseDir);
+  const si10 = checkSemanticInvariant10(baseDir);
+  const si11 = checkSemanticInvariant11(baseDir);
+  const si12 = checkSemanticInvariant12(baseDir);
+  const si13 = checkSemanticInvariant13(baseDir);
+  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13);
   if (siErrors.length === 0) {
     console.log('  OK: SI-01 (framework auto-selection) PASS');
     console.log('  OK: SI-02 (atomic PU apply) PASS');
@@ -788,6 +1127,11 @@ function main() {
     console.log('  OK: SI-06 (WIP limit enforcement) PASS');
     console.log('  OK: SI-07 (Story quality gap) PASS');
     console.log('  OK: SI-08 (Carry-over no silent roll) PASS');
+    console.log('  OK: SI-09 (Memory Boot order) PASS');
+    console.log('  OK: SI-10 (5-field recovery source) PASS');
+    console.log('  OK: SI-11 (Active Context authority) PASS');
+    console.log('  OK: SI-12 (Partial failure recovery) PASS');
+    console.log('  OK: SI-13 (Missing Required file fail-safe) PASS');
   } else {
     for (const e of siErrors) {
       console.log('  SEMANTIC VIOLATION: ' + e);
