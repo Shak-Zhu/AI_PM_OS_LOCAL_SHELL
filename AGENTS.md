@@ -41,6 +41,9 @@
 6. 读取 `ai-pm-os/references/stability-rules.md` 处理重复 / 冲突 / 恢复 / 脏工作树。
 7. 读取 `ai-pm-os/references/agile-delivery-rules.md` 执行敏捷交付治理。
 8. 读取 `ai-pm-os/scenarios/scenarios.md` 校验行为与基准场景一致。
+9. 读取 `ai-pm-os/references/runtime-compliance-contracts.md` 处理关键输出契约与 Pre-send Compliance Gate；
+   6 类契约（WP/Rework/QC/Change/PU/Human Acceptance）必须满足 10 字段 + 8 步门禁；
+   `one-click-copy = 完整正文单代码块`；不得依赖聊天记忆替代正式规则。
 
 不得越过上述文件直接猜测 Skill 行为；不得删除或弱化 `ai-pm-os/` 中
 任何强制条目。Skill 内核破坏时 `scripts/validate-skill.js` 必退出非 0。

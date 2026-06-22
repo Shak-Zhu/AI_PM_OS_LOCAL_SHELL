@@ -162,9 +162,49 @@ target_agents: [Cursor, Codex]
 - **跨 Agent 一致性**：Cursor 与 Codex 在相同壳和输入下遵守同一状态机、
   同一目录和同一审批规则。
 
+## 6b. Critical Output Contract（REQ-035 / WP-017）
+
+关键输出在发送前必须命中 `references/runtime-compliance-contracts.md` 中的契约，并完成 Pre-send Compliance Gate；删除或弱化任一字段视为破坏内核。
+
+### 6b.1 6 类关键输出契约
+
+| 编号 | 契约 | 触发 |
+|---|---|---|
+| COC-CWP-001 | Coder Work Package | PM AI 签发工作包给 Coder |
+| COC-RWP-002 | Rework Package | QC 报告 L3 rework required |
+| COC-PQR-003 | PM/QC Report | PM/QC 完成对一个 WP 的独立验收 |
+| COC-CAR-004 | Change / Approval Request | 用户提出 Scope / Baseline 变更请求 |
+| COC-PUA-005 | Pending Updates Approval Request | Skill 生成 Pending Update 后请求批准 |
+| COC-HAR-006 | Human Acceptance Request | Coder + PM/QC 均通过后请求 Human 验收 |
+
+每个契约具备 10 个字段：`contract_id` / `trigger` / `required_reads` / `required_sections` / `required_file_write` / `required_chat_delivery` / `abbreviation_exception` / `forbidden_shortcuts` / `evidence` / `fail_closed_behavior`。
+
+### 6b.2 Pre-send Compliance Gate（8 步）
+
+发送前必须按 8 步顺序检查，任一失败 → 停止发送制品 → 记录 Escalation + Gap：
+
+1. 意图与契约匹配
+2. Required Project Files 读取证据
+3. 必需章节完整
+4. 权威文件落盘
+5. 聊天交付模式
+6. 规范化一致性
+7. 禁止项未触发
+8. PASS/FAIL 证据
+
+### 6b.3 关键语义
+
+- `one-click-copy` = `完整正文单代码块`；不等于 path-only。
+- `path-only` 仅在 Human Owner 当前消息**显式**要求短指针时允许。
+- 三种非授权表达：`简洁` / `赶快` / `一键复制` 均不构成 path-only 授权。
+- 双输出事务：文件落盘 + 聊天全文必须同时成功；任一失败即交付失败。
+- 错误成功状态：不得在缺字段、缺渠道或授权不明时输出 `issued` / `accepted` / `complete` / `done` / `finished`。
+- 上下文压缩后必须重新读取契约来源；不得依赖聊天记忆替代正式规则。
+- 验证器 `SI-14` 机器检查契约和门禁；任一不通过即退出非 0。
+
 ## 7. 行为场景
 
-≥42 个 Given / When / Then 行为场景见 `scenarios/scenarios.md`，覆盖：
+≥50 个 Given / When / Then 行为场景见 `scenarios/scenarios.md`，覆盖：
 
 - 4 个专业框架组合（PMBOK / PRINCE2 / APM / PMO / Scrum / Kanban / Hybrid）
 - 4 个审批与权限（PU 绕过、Approved Baseline 覆盖、Sprint / Scope 冲突、Owner 缺失）
@@ -172,8 +212,9 @@ target_agents: [Cursor, Codex]
 - 4 个重复与恢复（同一初始化 3 次、重复 transcript、Missing 材料、中断恢复）
 - 4 个跨 Agent 与输出一致性
 - 8 个 Memory / Recovery 场景
+- 8 个 Critical Output Contract 场景（SC-COC-01~08）：双输出失败关闭、QC-F 引用缺失、阻断发现证据缺失、风险评估缺失、变更前后 diff 缺失、失败升级路径缺失、非授权短指针、错误成功状态
 
-合计 42 个场景。
+合计 50 个场景。
 
 ## 8. 安装与调用
 

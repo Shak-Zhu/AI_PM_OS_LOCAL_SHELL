@@ -750,3 +750,142 @@
   不得清空 pending_approvals 直至显式批准；
   不得重复执行原工作流（PU 内容不变）。
 - **Evidence**: 00_PM_MEMORY/PM_PENDING_UPDATES.md、00_PM_MEMORY/PM_ACTIVE_CONTEXT.md。
+
+## 43. Coder Work Package 双输出失败关闭
+
+- **ID**: SC-COC-01
+- **Framework**: PMO + runtime-compliance-contracts
+- **Given**: PM AI 签发 WP-### 给 Coder；COC-CWP-001 契约的 `required_chat_delivery` 为 `full-body-single-codeblock`。
+- **When**: Coder 在聊天中仅提供 WP-### 文件路径，未发送完整正文。
+- **Then**:
+  1. Pre-send Compliance Gate 第 5 步（聊天交付模式）检测到非 `full-body-single-codeblock`；
+  2. Pre-send Compliance Gate 失败；Coder 不得声明 `issued`；
+  3. Coder 写入 `00_PM_MEMORY/PM_GAP_ANALYSIS.md`：GAP-COC-001 `dual-output-failed`；
+  4. Coder 重新发送完整 WP-### 正文于单个代码块后再次走门禁；
+  5. 双渠道（文件 + 聊天）均成功后门禁 PASS，方可输出 `issued`。
+- **Allow**: 写 Gap；重新发送完整正文；记录失败原因。
+- **Forbid**: 不得在 chat 缺全文时输出 `issued` / `accepted` / `complete` / `done` / `finished`；
+  不得跳过第 5 步或第 6 步（规范化一致性）；不得用 path-only 替代 full body。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、文件落盘路径 + 行数、聊天代码块 hash。
+
+## 44. Rework Package QC-F 引用缺失关闭
+
+- **ID**: SC-COC-02
+- **Framework**: PMO + runtime-compliance-contracts
+- **Given**: QC 报告 QC-### 包含 3 个 QC-F（QC-F-001、QC-F-002、QC-F-003）；
+  PM AI 签发 WP-###-R1，但 `scope_in` 仅引用 2 个 QC-F。
+- **When**: Coder 接收返工包并执行 Pre-send Compliance Gate。
+- **Then**:
+  1. Gate 第 3 步（必需章节完整）发现 `scope_in` 缺 QC-F 引用；
+  2. Gate 失败；Coder 不得执行工作包正文；
+  3. Coder 写入 Gap：GAP-COC-002 `contract-field-missing`；
+  4. Coder 请求 PM AI 补齐 scope_in 中的 QC-F-### 引用后再次走门禁。
+- **Allow**: 写 Gap；请求 PM AI 补齐；不执行工作包。
+- **Forbid**: 不得在 QC-F 引用缺失时输出 `issued`；
+  不得猜测 QC-F 含义并自行补全；不得跨过 Gate 第 3 步。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、QC-###.md 路径、WP-###-R1.md 路径。
+
+## 45. PM/QC Report 阻断发现证据缺失关闭
+
+- **ID**: SC-COC-03
+- **Framework**: PMO + runtime-compliance-contracts
+- **Given**: PM/QC 评审 WP-### 后拟写 QC 报告，阻断发现表存在 1 条 ID `QC-F-###`；
+  但证据列（PM 独立证据 / 文件路径 / 退出码）为空。
+- **When**: PM AI 输出 QC 报告。
+- **Then**:
+  1. Gate 第 3 步（必需章节完整）发现阻断发现证据列缺失；
+  2. Gate 失败；PM AI 不得输出 `accepted` 或 `PM/QC Accepted：是`；
+  3. PM AI 写入 Gap：GAP-COC-003 `contract-field-missing`；
+  4. PM AI 补齐证据列（PM 独立执行的命令、文件路径、真实退出码）后再次走门禁。
+- **Allow**: 写 Gap；补齐证据列；记录失败原因。
+- **Forbid**: 不得在证据列缺失时输出 `accepted`；
+  不得用"已人工核验"代替结构化证据；不得用"通过"代替"PM/QC Accepted：是"。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、PM 独立执行的命令输出、文件路径 + 行数。
+
+## 46. Change Request 风险评估缺失关闭
+
+- **ID**: SC-COC-04
+- **Framework**: PMO + runtime-compliance-contracts
+- **Given**: 用户提出 REQ-### 加入 Sprint 的变更请求；
+  COC-CAR-004 契约的 `required_sections` 包含影响范围和风险评估。
+- **When**: PM AI 处理该变更请求。
+- **Then**:
+  1. Gate 第 3 步（必需章节完整）发现请求缺影响范围和风险评估；
+  2. Gate 失败；PM AI 不得输出 `approved` 或写入 Change Log；
+  3. PM AI 写入 Gap：GAP-COC-004 `contract-field-missing`；
+  4. PM AI 要求用户补充影响范围（Scope / WBS / RAID / Sprint）和风险 ID（R-###）后再次走门禁。
+- **Allow**: 写 Gap；请求用户补齐；记录失败原因。
+- **Forbid**: 不得在缺影响范围时直接写 Change Log；
+  不得以"小调整"为由跳过 PU；不得在缺风险评估时输出 `approved`。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、用户原始请求、PM AI 询问消息。
+
+## 47. Pending Update 变更前/后 diff 缺失关闭
+
+- **ID**: SC-COC-05
+- **Framework**: PMO + runtime-compliance-contracts
+- **Given**: Skill 生成 PU-### 修改 `00_PM_MEMORY/PM_SCOPE_BASELINE.md`；
+  COC-PUA-005 契约的 `required_sections` 包含变更前内容 / 变更后内容。
+- **When**: PM AI 请求用户批准 PU-###。
+- **Then**:
+  1. Gate 第 3 步（必需章节完整）发现变更前/后 diff 缺失；
+  2. Gate 失败；PM AI 不得输出 `pending-approval-ready`；
+  3. PM AI 写入 Gap：GAP-COC-005 `contract-field-missing`；
+  4. PM AI 重新计算变更前/后 hash 并写入 PU 条目后再次走门禁。
+- **Allow**: 写 Gap；重新计算 hash；记录失败原因。
+- **Forbid**: 不得以"按之前惯例"代替显式 diff；
+  不得在缺 hash 对比时输出 `pending-approval-ready`；不得将 Proposed 状态省略为"已申请"。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、PU-### 编号、变更前/后 hash 对比。
+
+## 48. Human Acceptance Request 失败升级路径缺失关闭
+
+- **ID**: SC-COC-06
+- **Framework**: PMO + runtime-compliance-contracts
+- **Given**: WP-### + QC-### 全部通过；PM AI 拟发 Human Acceptance Request；
+  COC-HAR-006 契约的 `required_sections` 包含失败升级路径。
+- **When**: PM AI 输出 Human Acceptance Request。
+- **Then**:
+  1. Gate 第 3 步（必需章节完整）发现失败升级路径缺失；
+  2. Gate 失败；PM AI 不得写入 `PM_APPROVAL_STATUS.md` Human Pending 条目；
+  3. PM AI 不得输出 `human-pending`；
+  4. PM AI 写入 Gap：GAP-COC-006 `contract-field-missing`；
+  5. PM AI 补齐失败升级路径（L1/L2/L3/L4 触发条件）后再次走门禁。
+- **Allow**: 写 Gap；补齐升级路径；记录失败原因。
+- **Forbid**: 不得以"Coder+PM 通过"代替 Human 验收请求；
+  不得省略失败升级路径；不得以"等待 Human 确认"代替明确验收请求。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、PM_APPROVAL_STATUS.md 路径、五层验收状态表。
+
+## 49. "一键复制"非授权 short pointer 拒绝
+
+- **ID**: SC-COC-07
+- **Framework**: PMO + runtime-compliance-contracts
+- **Given**: Human Owner 消息："把 WP-017 一键复制给我"；
+  "一键复制" 不属于 path-only 授权（按 `runtime-compliance-contracts.md` §2 三种非授权表达）。
+- **When**: PM AI 收到该消息并尝试 path-only 响应。
+- **Then**:
+  1. Pre-send Compliance Gate 第 5 步检测到 `required_chat_delivery` = `full-body-single-codeblock`，
+     但消息含"一键复制"非授权表达；
+  2. Gate 失败；PM AI 不得仅给路径；
+  3. PM AI 不得以"已 issued"或"已发送"状态声明完成；
+  4. PM AI 输出完整 WP-017 正文于单个代码块后再次走门禁。
+- **Allow**: 输出完整正文于单个代码块；记录非授权表达。
+- **Forbid**: 不得在非授权表达下使用 path-only；
+  不得将"一键复制"解释为 short pointer 授权；
+  不得跳过 Gate 第 5 步以图快。
+- **Evidence**: 聊天代码块 hash、`[Delivery Gate] PASS` 证据、Human Owner 原始消息引用。
+
+## 50. 错误成功状态禁止
+
+- **ID**: SC-COC-08
+- **Framework**: PMO + runtime-compliance-contracts
+- **Given**: WP-### 的 Pre-send Compliance Gate 失败（任一步骤不通过）；
+  错误成功状态包括：`issued` / `accepted` / `complete` / `done` / `finished`。
+- **When**: Coder 或 PM AI 试图在 Gate FAIL 时输出上述任一状态。
+- **Then**:
+  1. Skill 检测到上述状态与 Gate FAIL 同时出现；
+  2. Skill 立即写入 Gap：GAP-COC-008 `forbidden-success-state`；
+  3. Skill 不得保留该状态声明；必须以 `[Delivery Gate] FAIL: <reason>` 替代；
+  4. Skill 不得发送制品；必须先修复缺项再走门禁。
+- **Allow**: 写 Gap；清除错误成功状态；记录失败原因。
+- **Forbid**: 不得在 Gate FAIL 时输出 `issued` / `accepted` / `complete` / `done` / `finished`；
+  不得用"已发送"等含糊表达替代；不得"乐观声明"以避免尴尬。
+- **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、Gate FAIL 原因、修复后的 Gate PASS 证据。

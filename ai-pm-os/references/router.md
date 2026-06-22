@@ -125,3 +125,30 @@ Skill **只有**在以下实质歧义时才请求业务澄清：
 ## 7. 与场景的对应
 
 `scenarios/scenarios.md` 中所有"输入意图"必须能匹配本表第 1 列。
+
+## 8. Critical Output Contract 路由（REQ-035 / WP-017）
+
+当意图属于"关键输出"（即签发 Coder WP / Rework Package / PM-QC Report / Change-Approval / Pending Update 批准 / Human Acceptance）时，路由除匹配本表 §1 工作流外，还必须命中 `references/runtime-compliance-contracts.md` 中的对应契约。
+
+### §8.1 关键输出意图 → 契约映射
+
+| 意图关键词 | 工作流 | 契约 ID |
+|---|---|---|
+| 签发 / 下发 / 派发 工作包 | INIT / APPLY | COC-CWP-001 |
+| 返工 / reissue / rework / R1 | REWORK | COC-RWP-002 |
+| QC / 验收 / 评审 / 抽检 | AUDIT | COC-PQR-003 |
+| 变更 / 改 Scope / 改 Baseline | APPLY | COC-CAR-004 |
+| 批准 / apply PU | APPLY | COC-PUA-005 |
+| Human 验收 / Human 签收 | APPROVAL | COC-HAR-006 |
+
+### §8.2 强制 Pre-send Compliance Gate
+
+命中上述任一契约时，必须在发送前完成 8 步门禁（见 `runtime-compliance-contracts.md` §4）。门禁结果必须以 `[Delivery Gate] PASS` 或 `[Delivery Gate] FAIL: <reason>` 出现在制品证据区。
+
+### §8.3 双输出失败关闭
+
+文件落盘 + 聊天全文任一失败即视为交付失败；不得在缺字段 / 缺渠道 / 授权不明时输出 `issued` / `accepted` / `complete` / `done` / `finished` 等成功状态。
+
+### §8.4 短指针授权边界
+
+`one-click-copy` = `完整正文单代码块`；`path-only` 仅在 Human Owner 当前消息显式要求短指针时允许。`简洁` / `赶快` / `一键复制` 均不构成 path-only 授权。

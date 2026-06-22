@@ -23,7 +23,8 @@ const path = require('path');
 
 // WP-004: Single source of truth for scenario count. All heading/ID/block
 // and Phase 3 checks reference this constant. No scattered magic numbers.
-const EXPECTED_SCENARIO_COUNT = 42;
+// WP-017: Extended to 50 (added 8 runtime-compliance scenarios SC-COC-01..08).
+const EXPECTED_SCENARIO_COUNT = 50;
 
 // Required files inside the ai-pm-os/ package
 const REQUIRED_FILES = [
@@ -35,6 +36,7 @@ const REQUIRED_FILES = [
   'ai-pm-os/references/install-and-invoke.md',
   'ai-pm-os/references/agile-delivery-rules.md',
   'ai-pm-os/references/memory-and-recovery.md',
+  'ai-pm-os/references/runtime-compliance-contracts.md',
   'ai-pm-os/scenarios/scenarios.md',
 ];
 
@@ -1002,6 +1004,661 @@ function checkSemanticInvariant13(baseDir) {
   return errors;
 }
 
+/**
+ * SI-14: Critical Output Contract Registry & Pre-send Compliance Gate (WP-017 / REQ-035 / WP-017-R2)
+ *
+ * STRICT STRUCTURED PARSING — R2 (QC-F-037) upgrades:
+ *   (A) Raw CONTRACT:BLOCK / CONTRACT:ENDBLOCK markers are counted independently
+ *       from start to end of file. Both must appear exactly 6 times; every BLOCK
+ *       must pair with exactly one ENDBLOCK by ID and order; orphan/dup/nested/
+ *       mismatch/excess markers all fail-closed.
+ *   (B) Each block's contract_id field value must equal the BLOCK/ENDBLOCK ID exactly.
+ *   (C) Field-row parser is generic: any `| `field_name` | value |` line is parsed
+ *       where `field_name` matches backticked non-whitespace content (not just
+ *       `[a-z_]+`). Unknown fields fail; missing or duplicate fields fail.
+ *
+ * Per-block checks:
+ *   - exactly 10 field rows (no more, no less)
+ *   - field names match REQUIRED_FIELDS exactly (set equality)
+ *   - no duplicate field names within the same block
+ *   - `contract_id` field value equals block startId and endId
+ *
+ * Gate table (§4) and scoped semantics (§2) checks retained from R1.
+ */
+function checkSemanticInvariant14(baseDir) {
+  const rccPath = path.join(baseDir, 'ai-pm-os', 'references', 'runtime-compliance-contracts.md');
+  const rccContent = readSafe(rccPath) || '';
+  const errors = [];
+
+  if (!rccContent) {
+    errors.push('SI-14a: runtime-compliance-contracts.md missing');
+    return errors;
+  }
+
+  const expectedContractIds = [
+    'COC-CWP-001',
+    'COC-RWP-002',
+    'COC-PQR-003',
+    'COC-CAR-004',
+    'COC-PUA-005',
+    'COC-HAR-006',
+  ];
+  const requiredFields = [
+    'contract_id',
+    'trigger',
+    'required_reads',
+    'required_sections',
+    'required_file_write',
+    'required_chat_delivery',
+    'abbreviation_exception',
+    'forbidden_shortcuts',
+    'evidence',
+    'fail_closed_behavior',
+  ];
+
+  // === (A) Raw marker scanning: orphan/dup/nested/mismatch/excess ===
+  // Iterate over the WHOLE document scanning every CONTRACT:BLOCK / CONTRACT:ENDBLOCK marker.
+  // Build a token stream and validate pairing structurally, NOT by regex grouping.
+  const beginMarkerRe = /<!--\s*CONTRACT:BLOCK:([A-Z0-9-]+)\s*-->/g;
+  const endMarkerRe = /<!--\s*CONTRACT:ENDBLOCK:([A-Z0-9-]+)\s*-->/g;
+
+  // Collect raw marker tokens in document order
+  const markerTokens = [];
+  let bm;
+  beginMarkerRe.lastIndex = 0;
+  while ((bm = beginMarkerRe.exec(rccContent)) !== null) {
+    markerTokens.push({ kind: 'BLOCK', id: bm[1], index: bm.index });
+  }
+  let em;
+  endMarkerRe.lastIndex = 0;
+  while ((em = endMarkerRe.exec(rccContent)) !== null) {
+    markerTokens.push({ kind: 'ENDBLOCK', id: em[1], index: em.index });
+  }
+  markerTokens.sort((a, b) => a.index - b.index);
+
+  // Begin/end raw counts (independent)
+  const rawBeginCount = markerTokens.filter(t => t.kind === 'BLOCK').length;
+  const rawEndCount = markerTokens.filter(t => t.kind === 'ENDBLOCK').length;
+  if (rawBeginCount !== 6) {
+    errors.push('SI-14b1: raw CONTRACT:BLOCK marker count = ' + rawBeginCount + ', must be exactly 6 (orphan/excess detected)');
+  }
+  if (rawEndCount !== 6) {
+    errors.push('SI-14b2: raw CONTRACT:ENDBLOCK marker count = ' + rawEndCount + ', must be exactly 6 (orphan/excess detected)');
+  }
+
+  // Detect duplicate raw IDs in begins and ends
+  const beginIds = markerTokens.filter(t => t.kind === 'BLOCK').map(t => t.id);
+  const endIds = markerTokens.filter(t => t.kind === 'ENDBLOCK').map(t => t.id);
+  const beginSeen = {};
+  for (const id of beginIds) {
+    if (beginSeen[id]) errors.push('SI-14b3: duplicate CONTRACT:BLOCK id "' + id + '"');
+    beginSeen[id] = true;
+  }
+  const endSeen = {};
+  for (const id of endIds) {
+    if (endSeen[id]) errors.push('SI-14b4: duplicate CONTRACT:ENDBLOCK id "' + id + '"');
+    endSeen[id] = true;
+  }
+
+  // Validate pairing by walking tokens: BLOCK pushes, ENDBLOCK pops with matching ID.
+  const stack = [];
+  const pairedBlocks = [];
+  for (const tok of markerTokens) {
+    if (tok.kind === 'BLOCK') {
+      // Detect nested BLOCK without closing previous one
+      if (stack.length > 0) {
+        errors.push('SI-14b5: nested CONTRACT:BLOCK "' + tok.id + '" detected inside unclosed block "' + stack[stack.length - 1].id + '"');
+      }
+      stack.push(tok);
+    } else { // ENDBLOCK
+      if (stack.length === 0) {
+        errors.push('SI-14b6: orphan CONTRACT:ENDBLOCK "' + tok.id + '" without preceding BLOCK');
+        continue;
+      }
+      const top = stack.pop();
+      if (top.id !== tok.id) {
+        errors.push('SI-14b7: marker ID mismatch: BLOCK "' + top.id + '" paired with ENDBLOCK "' + tok.id + '"');
+      }
+      // Extract body between top.index (after the BEGIN marker line) and tok.index (before the END marker line)
+      // Compute end of begin marker line
+      let beginLineEnd = rccContent.indexOf('\n', top.index);
+      if (beginLineEnd < 0) beginLineEnd = rccContent.length;
+      const body = rccContent.substring(beginLineEnd + 1, tok.index);
+      pairedBlocks.push({ id: top.id, body: body });
+    }
+  }
+  // Any remaining unclosed BLOCK
+  for (const unclosed of stack) {
+    errors.push('SI-14b8: orphan CONTRACT:BLOCK "' + unclosed.id + '" without matching ENDBLOCK');
+  }
+
+  // === (B) Per-block field validation (using paired blocks from token walk) ===
+  if (pairedBlocks.length !== 6) {
+    // Don't proceed with field validation if pairing failed; surface counting error.
+    errors.push('SI-14b9: successfully paired block count = ' + pairedBlocks.length + ', must be exactly 6');
+  }
+
+  for (let i = 0; i < pairedBlocks.length; i++) {
+    const blk = pairedBlocks[i];
+    // Also enforce strict order match with expectedContractIds
+    if (i < expectedContractIds.length && blk.id !== expectedContractIds[i]) {
+      errors.push('SI-14c1: block ' + (i + 1) + ' has id "' + blk.id + '", expected "' + expectedContractIds[i] + '" (out-of-order)');
+    }
+    // Reject unexpected IDs in any position
+    if (!expectedContractIds.includes(blk.id)) {
+      errors.push('SI-14c1: unexpected contract block id "' + blk.id + '" (not in expected set)');
+    }
+
+    const lines = blk.body.split('\n');
+    // (C) Generic field-row parser: any backticked field_name on a table row.
+    // Old R1 regex was `^\|\s*`([a-z_]+)`\s*\|`; the new parser must accept:
+    //   fake-field   (kebab-case) → unknown field
+    //   FakeField    (PascalCase) → unknown field
+    //   field.name   (dotted)     → unknown field
+    //   contract_id  (snake_case) → known field
+    // We require a leading pipe, optional spaces, a backtick, then capture
+    // the field name (anything until the closing backtick), then a pipe.
+    const fieldRowRe = /^\|\s*`([^`]+)`\s*\|/;
+    const fieldRows = [];
+    let fieldRowTotalCount = 0;
+    const seenFieldNames = {};
+    for (const line of lines) {
+      const fm = line.match(fieldRowRe);
+      if (fm) {
+        fieldRowTotalCount++;
+        const fname = fm[1];
+        if (seenFieldNames[fname]) {
+          errors.push('SI-14c2: contract ' + blk.id + ' has duplicate field row "' + fname + '"');
+        }
+        seenFieldNames[fname] = true;
+        fieldRows.push(fname);
+      }
+    }
+    // Must have exactly 10 field rows
+    if (fieldRows.length !== 10) {
+      errors.push('SI-14c3: contract ' + blk.id + ' has ' + fieldRows.length + ' field rows, expected exactly 10');
+      continue;
+    }
+    // Set equality with requiredFields; unknown fields must fail.
+    const blockSet = new Set(fieldRows);
+    const reqSet = new Set(requiredFields);
+    const missingFields = requiredFields.filter(f => !blockSet.has(f));
+    const extraFields = fieldRows.filter(f => !reqSet.has(f));
+    if (missingFields.length > 0) {
+      errors.push('SI-14c4: contract ' + blk.id + ' missing fields: ' + missingFields.join(', '));
+    }
+    if (extraFields.length > 0) {
+      errors.push('SI-14c5: contract ' + blk.id + ' has unknown fields: ' + extraFields.join(', '));
+    }
+
+    // === (B) contract_id field value must equal block ID exactly ===
+    // Extract the value of the contract_id row.
+    // Pattern: | `contract_id` | VALUE |
+    let contractIdValue = null;
+    for (const line of lines) {
+      const cm = line.match(/^\|\s*`contract_id`\s*\|\s*([^|]+?)\s*\|\s*$/);
+      if (cm) {
+        contractIdValue = cm[1].trim();
+        break;
+      }
+    }
+    if (contractIdValue === null) {
+      // Already reported in c4
+      continue;
+    }
+    if (contractIdValue !== blk.id) {
+      errors.push('SI-14c6: contract ' + blk.id + ' has contract_id field value "' + contractIdValue + '", must equal BLOCK/ENDBLOCK id exactly');
+    }
+  }
+
+  // === §4 Gate Table Parsing (strict) ===
+  // Find the section "## 4. Pre-send Compliance Gate"
+  const sec4Start = rccContent.indexOf('## 4. Pre-send Compliance Gate');
+  if (sec4Start < 0) {
+    errors.push('SI-14d: runtime-compliance-contracts.md missing §4 Pre-send Compliance Gate section');
+  } else {
+    let sec4End = rccContent.indexOf('\n## ', sec4Start + 1);
+    if (sec4End < 0) sec4End = rccContent.length;
+    const sec4 = rccContent.substring(sec4Start, sec4End);
+    // Extract Gate table rows: | <num> | <name> | <check> |
+    const gateRows = [];
+    const tableLineRe = /^\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/;
+    for (const line of sec4.split('\n')) {
+      const gm = line.match(tableLineRe);
+      if (gm) {
+        gateRows.push({ num: parseInt(gm[1]), name: gm[2].trim() });
+      }
+    }
+    if (gateRows.length !== 8) {
+      errors.push('SI-14d: §4 Gate table has ' + gateRows.length + ' rows, expected exactly 8');
+    } else {
+      const expectedGateNames = [
+        '意图与契约匹配',
+        'Required Project Files 读取证据',
+        '必需章节完整',
+        '权威文件落盘',
+        '聊天交付模式',
+        '规范化一致性',
+        '禁止项未触发',
+        'PASS/FAIL 证据',
+      ];
+      for (let i = 0; i < 8; i++) {
+        if (gateRows[i].num !== i + 1) {
+          errors.push('SI-14d: §4 Gate row ' + (i + 1) + ' has number ' + gateRows[i].num + ', expected ' + (i + 1));
+        }
+        if (gateRows[i].name !== expectedGateNames[i]) {
+          errors.push('SI-14d: §4 Gate row ' + (i + 1) + ' has name "' + gateRows[i].name + '", expected "' + expectedGateNames[i] + '"');
+        }
+      }
+    }
+  }
+
+  // === Scoped semantic checks ===
+  // One-click-copy rule scoped to §2 KEY_SEMANTICS block.
+  const sec2Start = rccContent.indexOf('<!-- SECTION:KEY_SEMANTICS -->');
+  const sec2End = rccContent.indexOf('<!-- END:KEY_SEMANTICS -->');
+  if (sec2Start < 0 || sec2End < 0) {
+    errors.push('SI-14e: runtime-compliance-contracts.md missing §2 KEY_SEMANTICS section markers');
+  } else {
+    const sec2 = rccContent.substring(sec2Start, sec2End);
+    if (!/one-click-copy[`\s=]+完整正文单代码块/.test(sec2)) {
+      errors.push('SI-14e: §2 KEY_SEMANTICS missing one-click-copy = 完整正文单代码块 rule');
+    }
+    if (!/完整正文单代码块/.test(sec2)) {
+      errors.push('SI-14e: §2 KEY_SEMANTICS missing 完整正文单代码块 phrase');
+    }
+    if (!/简洁/.test(sec2) || !/赶快/.test(sec2) || !/一键复制/.test(sec2)) {
+      errors.push('SI-14e: §2 KEY_SEMANTICS missing one or more non-grant expressions (简洁, 赶快, 一键复制)');
+    }
+    if (!/双输出事务/.test(sec2)) {
+      errors.push('SI-14e: §2 KEY_SEMANTICS missing 双输出事务 rule');
+    }
+    // Forbidden success states must appear in §2 in error-forbidden context
+    const forbiddenInSec2 = ['issued', 'accepted', 'complete', 'done', 'finished'];
+    const missingInSec2 = forbiddenInSec2.filter(s => !sec2.includes(s));
+    if (missingInSec2.length > 0) {
+      errors.push('SI-14e: §2 KEY_SEMANTICS missing forbidden success states: ' + missingInSec2.join(', '));
+    }
+    // R2 (QC-F-038): single universal abbreviation_exception rule must be in §1.1.
+    if (!/§1\.1|1\.1.*唯一通用规则/.test(sec2) && !/§1\.1|1\.1.*唯一通用规则/.test(rccContent)) {
+      errors.push('SI-14h: runtime-compliance-contracts.md missing §1.1 single universal abbreviation_exception rule');
+    }
+  }
+
+  // Dual-output fail-closed rule scoped to §4 Gate
+  if (sec4Start >= 0) {
+    let sec4End2 = rccContent.indexOf('\n## ', sec4Start + 1);
+    if (sec4End2 < 0) sec4End2 = rccContent.length;
+    const sec4 = rccContent.substring(sec4Start, sec4End2);
+    if (!/双输出|dual.output/.test(sec4)) {
+      errors.push('SI-14g: §4 Gate table missing dual-output reference');
+    }
+  }
+
+  // QC-F-041/042: executable GOVERNANCE_ROOT resolution validation
+  validateGovernanceRoot(baseDir, rccContent, errors);
+
+  return errors;
+}
+
+/**
+ * QC-F-042 / WP-017-R3: Resolves and validates GOVERNANCE_ROOT.
+ *
+ * Resolution priority (highest to lowest):
+ *   1. explicitValue — if strictly null/undefined, falls through to config/default.
+ *      If explicitly provided (even blank/whitespace), fail-closed immediately.
+ *   2. .ai-pm-os/governance-root file, first non-empty non-comment line.
+ *      Blank/whitespace lines fall through to default.
+ *   3. defaultValue (project-relative, read from §0.5.2).
+ *
+ * Returns { path: string } on success (normalized project-relative path).
+ * Throws on illegal values:
+ *   - Windows drive letter paths (C:\, D:/, etc.)
+ *   - Unix absolute paths (starts with /)
+ *   - UNC paths (starts with \\)
+ *   - Contains .. path segment
+ *   - Any path segment equals _DEV_PROJECT_CONTROL (case-insensitive, position-agnostic)
+ *   - Explicit blank/whitespace value (QC-F-044)
+ *   - Resolved result falls outside projectRoot
+ */
+function resolveGovernanceRoot(projectRoot, explicitValue, configFilePath, defaultValue) {
+  let raw = undefined;
+
+  // === Priority 1: Explicit value ===
+  // null / undefined means "not provided" — fall through to config file / default.
+  // Anything else — even blank string or whitespace — is an explicit value and
+  // MUST be validated; blank/whitespace is a fail-closed violation (QC-F-044).
+  if (explicitValue !== null && explicitValue !== undefined) {
+    const trimmed = explicitValue.trim();
+    if (trimmed === '') {
+      throw new Error('governance-root-invalid: explicit value is blank/whitespace — not allowed');
+    }
+    raw = trimmed;
+  }
+
+  // === Priority 2: Config file ===
+  if (raw === undefined) {
+    const fs = require('fs');
+    if (fs.existsSync(configFilePath)) {
+      const fileLines = fs.readFileSync(configFilePath, 'utf8').split('\n');
+      for (const line of fileLines) {
+        const t = line.trim();
+        // Blank or comment-only → continue to next priority
+        if (!t || t.startsWith('#')) continue;
+        raw = t;
+        break;
+      }
+    }
+  }
+
+  // === Priority 3: Default value ===
+  if (raw === undefined) {
+    raw = defaultValue;
+  }
+
+  // === Validation: non-string ===
+  if (typeof raw !== 'string') {
+    throw new Error('governance-root-invalid: value is not a string');
+  }
+
+  // === Validation: §0.5.4 — normalize separators and check each segment ===
+  // Normalize all backslashes to forward slashes BEFORE splitting into segments.
+  // This ensures _DEV_PROJECT_CONTROL\foo and foo\_DEV_PROJECT_CONTROL\bar are both caught.
+  const normalized = raw.replace(/\\/g, '/');
+  const segments = normalized.split('/').filter(s => s !== '');
+
+  for (const seg of segments) {
+    if (seg === '..') {
+      throw new Error('governance-root-invalid: ".." path segment not allowed');
+    }
+    // Case-insensitive segment equality check for reserved directory (QC-F-045).
+    // Catches: _DEV_PROJECT_CONTROL, _DEV_PROJECT_CONTROL/, _DEV_PROJECT_CONTROL\,
+    // foo/_dev_project_control/bar, foo\_Dev_Project_Control\bar, etc.
+    if (seg.toUpperCase() === '_DEV_PROJECT_CONTROL') {
+      throw new Error('governance-root-invalid: reserved directory _DEV_PROJECT_CONTROL not allowed in path');
+    }
+  }
+
+  // === Validation: Windows drive letter ===
+  if (/^[A-Za-z]:[/\\]/.test(normalized)) {
+    throw new Error('governance-root-invalid: Windows drive letter path not allowed');
+  }
+
+  // === Validation: Unix absolute path ===
+  if (normalized.startsWith('/')) {
+    throw new Error('governance-root-invalid: Unix absolute path not allowed');
+  }
+
+  // === Validation: UNC path ===
+  if (normalized.startsWith('//') || normalized.startsWith('\\\\')) {
+    throw new Error('governance-root-invalid: UNC path not allowed');
+  }
+
+  // === Validation: resolved path must stay within projectRoot ===
+  const joinedPath = segments.join('/');
+  const resolvedFull = require('path').resolve(projectRoot, joinedPath);
+  const resolvedNorm = require('path').normalize(resolvedFull);
+  const projectNorm = require('path').normalize(require('path').resolve(projectRoot));
+  if (!resolvedNorm.startsWith(projectNorm + require('path').sep)) {
+    throw new Error('governance-root-invalid: resolved path falls outside project root');
+  }
+
+  return { path: joinedPath };
+}
+
+// QC-F-041/042: Validate GOVERNANCE_ROOT resolution.
+function validateGovernanceRoot(baseDir, rccContent, errors) {
+  // Parses §0.5 from rccContent to get default, then calls resolveGovernanceRoot
+  // with no explicit override and no config file — must use the documented default.
+  // Also directly tests illegal inputs to verify fail-closed behavior.
+  //
+  // Validates document-level requirements:
+  //   SI-14i: §0.5 exists, §0.5.2 default != _DEV_PROJECT_CONTROL/
+  //   SI-14j: §0.5.2 describes a product-shell default path
+  //   SI-14k: governance-root-invalid escalation present
+  // Validates specific prohibition content (not just keyword presence):
+  //   - §0.5.4 contains all 5 prohibition rules with their "开头/含/段" forms intact
+  //   - Removing or commenting out any prohibition line is detected
+  const sec05Start = rccContent.indexOf('## 0.5. GOVERNANCE_ROOT');
+  const sec05End = rccContent.indexOf('\n## ', sec05Start + 1);
+  const sec05 = rccContent.substring(sec05Start, sec05End > 0 ? sec05End : rccContent.length);
+
+  // §0.5.4 sub-section
+  const sec054Start = sec05.indexOf('### 0.5.4');
+  const sec054End = sec05.indexOf('\n###', sec054Start + 1);
+  const sec054 = sec054Start >= 0 ? sec05.substring(sec054Start, sec054End > 0 ? sec054End : sec05.length) : '';
+
+  // Check all 5 prohibition lines are present with their required form
+  const prohibited = [
+    { pattern: /不得以\s+Windows\s+盘符路径开头/, label: 'Windows drive-letter prohibition' },
+    { pattern: /不得以\s+`\/`\s+开头/, label: 'Unix absolute path prohibition' },
+    { pattern: /不得以双反斜杠开头/, label: 'UNC path prohibition' },
+    { pattern: /不得含\s+`\.\.`\s+路径段/, label: '".." segment prohibition' },
+    { pattern: /越出项目根/, label: 'outside-project-root prohibition' },
+  ];
+  for (const check of prohibited) {
+    if (!check.pattern.test(sec054)) {
+      errors.push('SI-14i: §0.5.4 missing or altered: ' + check.label + ' (pattern: ' + check.pattern + ')');
+    }
+  }
+
+  // §5 escalation check — must appear in §5 section (not just anywhere in doc)
+  const sec05_failStart = rccContent.indexOf('## 5. 失败升级路径');
+  const sec05_failEnd = rccContent.indexOf('\n## ', sec05_failStart + 1);
+  const sec05_fail = sec05_failStart >= 0
+    ? rccContent.substring(sec05_failStart, sec05_failEnd > 0 ? sec05_failEnd : rccContent.length)
+    : '';
+  if (!/governance-root-invalid/.test(sec05_fail)) {
+    errors.push('SI-14k: runtime-compliance-contracts.md §5 missing governance-root-invalid escalation');
+  }
+
+  // Validate §0.5.1 table row 3 explicitly — must contain product-shell path (not _DEV_PROJECT_CONTROL/)
+  const sec051Match = rccContent.match(/\|\s*3\s*\|[^|]*\|[^|]*\|/);
+  if (sec051Match) {
+    const row3 = sec051Match[0];
+    if (/_DEV_PROJECT_CONTROL_/.test(row3)) {
+      errors.push('SI-14i: §0.5.1 priority-3 row contains _DEV_PROJECT_CONTROL/ (must be product-shell path)');
+    }
+    if (!/01_PM_DOCUMENTS[\\/]AI_PM_GOVERNANCE/.test(row3)) {
+      errors.push('SI-14i: §0.5.1 priority-3 row missing product-shell default governance root');
+    }
+  }
+
+  // Validate §0.5.3 rule 3 explicitly — must reference product-shell path (not _DEV_PROJECT_CONTROL/)
+  const sec053Match = rccContent.match(/3\.\s+否则使用[^`\n]+`([^`]+)`/);
+  if (sec053Match) {
+    const ref = sec053Match[1];
+    if (ref === '_DEV_PROJECT_CONTROL/' || ref.includes('_DEV_PROJECT_CONTROL/')) {
+      errors.push('SI-14i: §0.5.3 rule 3 fallback is _DEV_PROJECT_CONTROL/ (must be product-shell path)');
+    }
+  }
+
+  // Validate §0.5.3 rule 4 — must contain "→ fail-closed：" marker
+  const sec053Rule4 = rccContent.match(/4\.\s+解析失败[^→\n]*→\s*fail-closed\s*：/);
+  if (!sec053Rule4) {
+    errors.push('SI-14i: §0.5.3 rule 4 missing "→ fail-closed：" marker');
+  }
+
+  // Extract and validate §0.5.2
+  const sec05dot2Match = rccContent.match(/## 0\.5\.2[\s\S]{0,600}/);
+  const sec05dot2 = sec05dot2Match ? sec05dot2Match[0] : '';
+  const devCtrlMatch = sec05dot2.match(/_DEV_PROJECT_CONTROL_/);
+  if (devCtrlMatch) {
+    errors.push('SI-14i: §0.5.2 still references _DEV_PROJECT_CONTROL/ as default governance root');
+  }
+
+  // Parse the actual default path from §0.5.2 — must be product-shell path
+  const defaultPathMatch = sec05dot2.match(/GOVERNANCE_ROOT\s*=\s*<project_root>\/([^`，]+)/);
+  const parsedDefaultPath = defaultPathMatch ? defaultPathMatch[1] : null;
+  if (!parsedDefaultPath || parsedDefaultPath === '_DEV_PROJECT_CONTROL/' || parsedDefaultPath.includes('_DEV_PROJECT_CONTROL/')) {
+    errors.push('SI-14i: §0.5.2 default path "' + (parsedDefaultPath || 'NOT FOUND') + '" is _DEV_PROJECT_CONTROL/ or missing');
+  }
+
+  // §0.5 keyword check (must have heading + GOVERNANCE_ROOT description)
+  if (sec05Start < 0) {
+    errors.push('SI-14i: runtime-compliance-contracts.md missing §0.5 GOVERNANCE_ROOT resolution contract');
+  } else {
+    if (!/GOVERNANCE_ROOT\s*解析/.test(sec05)) {
+      errors.push('SI-14i: §0.5 section missing GOVERNANCE_ROOT 解析 subtitle');
+    }
+  }
+
+  const configFilePath = path.join(baseDir, '.ai-pm-os', 'governance-root');
+  const projectRoot = baseDir;
+
+  // 3) Default value resolution: no override, no config file present.
+  const effectiveDefault = parsedDefaultPath || '01_PM_DOCUMENTS/AI_PM_GOVERNANCE';
+  try {
+    const result = resolveGovernanceRoot(projectRoot, null, configFilePath, effectiveDefault);
+    if (result.path.replace(/\/+$/, '') === '_DEV_PROJECT_CONTROL' || result.path.replace(/\/+$/, '').includes('_DEV_PROJECT_CONTROL')) {
+      errors.push('SI-14i: default governance root resolves to _DEV_PROJECT_CONTROL/ — not allowed');
+    }
+  } catch (e) {
+    errors.push('SI-14i: default GOVERNANCE_ROOT resolution threw: ' + e.message);
+  }
+
+  // 4) R3 illegal value fail-closed tests
+  const illegalInputs = [
+    { label: '../outside', value: '../outside/' },
+    { label: '/tmp/x (Unix absolute)', value: '/tmp/x' },
+    { label: 'C:\\temp (Windows drive)', value: 'C:\\temp' },
+    { label: '\\\\server\\share (UNC)', value: '\\\\server\\share' },
+    { label: '_DEV_PROJECT_CONTROL/', value: '_DEV_PROJECT_CONTROL/' },
+  ];
+  for (const test of illegalInputs) {
+    try {
+      resolveGovernanceRoot(projectRoot, test.value, configFilePath, effectiveDefault);
+      errors.push('SI-14i: illegal GOVERNANCE_ROOT "' + test.label + '" was accepted (must throw)');
+    } catch (e) {
+      // Expected: throw on illegal input — correct behavior
+    }
+  }
+
+  // 4) QC-F-044: blank/whitespace explicit value must fail; null/undefined must fall through
+  const blankExplicitInputs = [
+    { label: '"" (empty string)', value: '' },
+    { label: '"   " (spaces)', value: '   ' },
+    { label: '"\t" (tab)', value: '\t' },
+  ];
+  for (const test of blankExplicitInputs) {
+    try {
+      resolveGovernanceRoot(projectRoot, test.value, configFilePath, effectiveDefault);
+      errors.push('SI-14i: blank explicit value "' + test.label + '" was accepted (must throw)');
+    } catch (e) {
+      // Expected: throw on blank explicit value — correct behavior
+    }
+  }
+
+  // 4b) null/undefined must fall through to default (not throw)
+  const normDefault = effectiveDefault.replace(/\/+$/, '');
+  try {
+    const nullResult = resolveGovernanceRoot(projectRoot, null, configFilePath, effectiveDefault);
+    if (!nullResult || !nullResult.path) {
+      errors.push('SI-14i: null explicit value must fall through to default');
+    } else if (nullResult.path.replace(/\/+$/, '') !== normDefault) {
+      errors.push('SI-14i: null resolved to "' + nullResult.path + '" expected "' + effectiveDefault + '"');
+    }
+  } catch (e) {
+    errors.push('SI-14i: null explicit value threw: ' + e.message + ' (must fall through, not throw)');
+  }
+  try {
+    const undefinedResult = resolveGovernanceRoot(projectRoot, undefined, configFilePath, effectiveDefault);
+    if (!undefinedResult || !undefinedResult.path) {
+      errors.push('SI-14i: undefined explicit value must fall through to default');
+    } else if (undefinedResult.path.replace(/\/+$/, '') !== normDefault) {
+      errors.push('SI-14i: undefined resolved to "' + undefinedResult.path + '" expected "' + effectiveDefault + '"');
+    }
+  } catch (e) {
+    errors.push('SI-14i: undefined explicit value threw: ' + e.message + ' (must fall through, not throw)');
+  }
+
+  // 5) QC-F-045: reserved directory — all forms must fail
+  const reservedInputs = [
+    { label: '_DEV_PROJECT_CONTROL (bare, no slash)', value: '_DEV_PROJECT_CONTROL' },
+    { label: '_DEV_PROJECT_CONTROL\\ (trailing backslash)', value: '_DEV_PROJECT_CONTROL\\' },
+    { label: 'foo/_dev_project_control/bar', value: 'foo/_dev_project_control/bar' },
+    { label: 'foo\\_Dev_Project_Control\\bar', value: 'foo\\_Dev_Project_Control\\bar' },
+  ];
+  for (const test of reservedInputs) {
+    try {
+      resolveGovernanceRoot(projectRoot, test.value, configFilePath, effectiveDefault);
+      errors.push('SI-14i: reserved directory path "' + test.label + '" was accepted (must throw)');
+    } catch (e) {
+      // Expected: throw on reserved directory — correct behavior
+    }
+  }
+
+  // 5b) Valid project-relative paths must pass
+  try {
+    resolveGovernanceRoot(projectRoot, '01_PM_DOCUMENTS/custom', configFilePath, effectiveDefault);
+  } catch (e) {
+    errors.push('SI-14i: valid path "01_PM_DOCUMENTS/custom" threw: ' + e.message);
+  }
+
+  // 6) Priority override tests (scope_in §4)
+  // P1: explicit legal value overrides config file
+  try {
+    resolveGovernanceRoot(projectRoot, '01_PM_DOCUMENTS/override', '/nonexistent/path', effectiveDefault);
+  } catch (e) {
+    errors.push('SI-14i: P1 priority test (explicit overrides missing config) threw: ' + e.message);
+  }
+  // P2: no explicit, legal config file overrides default
+  {
+    const tmpDir = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'rcc-test-'));
+    const cfg = require('path').join(tmpDir, 'governance-root');
+    require('fs').writeFileSync(cfg, '01_PM_DOCUMENTS/fromConfig\n');
+    try {
+      const r = resolveGovernanceRoot(projectRoot, null, cfg, effectiveDefault);
+      if (r.path.replace(/\/+$/, '') !== '01_PM_DOCUMENTS/fromConfig') {
+        errors.push('SI-14i: P2 priority test (config overrides default) got: ' + r.path);
+      }
+    } catch (e) {
+      errors.push('SI-14i: P2 priority test threw: ' + e.message);
+    } finally {
+      require('fs').rmSync(tmpDir, { recursive: true });
+    }
+  }
+  // P2: empty config line falls through to default
+  {
+    const tmpDir = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'rcc-test-'));
+    const cfg = require('path').join(tmpDir, 'governance-root');
+    require('fs').writeFileSync(cfg, '\n\n# comment\n   \n');
+    try {
+      const r = resolveGovernanceRoot(projectRoot, null, cfg, effectiveDefault);
+      if (r.path.replace(/\/+$/, '') !== normDefault) {
+        errors.push('SI-14i: P2 empty-config falls-through test got: ' + r.path + ' expected: ' + effectiveDefault);
+      }
+    } catch (e) {
+      errors.push('SI-14i: P2 empty-config threw: ' + e.message);
+    } finally {
+      require('fs').rmSync(tmpDir, { recursive: true });
+    }
+  }
+  // P2: illegal config must fail
+  {
+    const tmpDir = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'rcc-test-'));
+    const cfg = require('path').join(tmpDir, 'governance-root');
+    require('fs').writeFileSync(cfg, '../outside/\n');
+    try {
+      resolveGovernanceRoot(projectRoot, null, cfg, effectiveDefault);
+      errors.push('SI-14i: P2 illegal-config test accepted bad config');
+    } catch (e) {
+      // Expected: throw on illegal config value
+    } finally {
+      require('fs').rmSync(tmpDir, { recursive: true });
+    }
+  }
+  // P3: no explicit, no config → default
+  try {
+    const r = resolveGovernanceRoot(projectRoot, null, '/nonexistent/path/ever', effectiveDefault);
+    if (r.path.replace(/\/+$/, '') !== normDefault) {
+      errors.push('SI-14i: P3 default test got: ' + r.path + ' expected: ' + effectiveDefault);
+    }
+  } catch (e) {
+    errors.push('SI-14i: P3 default test threw: ' + e.message);
+  }
+}
+
 function main() {
   const baseDir = path.resolve(__dirname, '..');
 
@@ -1117,7 +1774,8 @@ function main() {
   const si11 = checkSemanticInvariant11(baseDir);
   const si12 = checkSemanticInvariant12(baseDir);
   const si13 = checkSemanticInvariant13(baseDir);
-  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13);
+  const si14 = checkSemanticInvariant14(baseDir);
+  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14);
   if (siErrors.length === 0) {
     console.log('  OK: SI-01 (framework auto-selection) PASS');
     console.log('  OK: SI-02 (atomic PU apply) PASS');
@@ -1132,6 +1790,7 @@ function main() {
     console.log('  OK: SI-11 (Active Context authority) PASS');
     console.log('  OK: SI-12 (Partial failure recovery) PASS');
     console.log('  OK: SI-13 (Missing Required file fail-safe) PASS');
+    console.log('  OK: SI-14 (Critical Output Contract) PASS');
   } else {
     for (const e of siErrors) {
       console.log('  SEMANTIC VIOLATION: ' + e);

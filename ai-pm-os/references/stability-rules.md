@@ -144,3 +144,60 @@
 9. Memory / Recovery（Memory Boot、上下文压缩、缺失 Required 文件、损坏 Active Context、过期冲突、写入中断、部分失败、审批等待）
 
 任何未覆盖视为稳定性不足。
+
+## 10. Critical Output Contract 失败关闭（REQ-035 / WP-017）
+
+关键输出在发送前必须命中契约并完成 8 步 Pre-send Compliance Gate（见 `runtime-compliance-contracts.md` §4）。本节为稳定性规则的运行时延伸，删除或弱化视为破坏内核。
+
+### 10.1 双输出事务
+
+| 渠道 | 要求 |
+|---|---|
+| 文件落盘（`required_file_write`） | 必须成功写入；行数 ≥ 预期最小值 |
+| 聊天交付（`required_chat_delivery`） | 必须为 `full-body-single-codeblock`；含完整正文 |
+
+任一渠道失败 = 交付失败。文件落盘成功但聊天全文缺失 = 交付失败。聊天全文存在但权威文件未落盘 = 交付失败。
+
+### 10.2 错误成功状态禁止
+
+不得在缺字段、缺渠道或授权不明时输出以下任一成功状态：
+
+- `issued`
+- `accepted`
+- `complete` / `done` / `finished`
+- `pending-approval-ready`
+- `human-pending`
+
+任一状态与 Gate FAIL 同时出现时，立即写入 `00_PM_MEMORY/PM_GAP_ANALYSIS.md` 编号 `GAP-COC-###`，状态为 `forbidden-success-state`；必须以 `[Delivery Gate] FAIL: <reason>` 替代。
+
+### 10.3 短指针授权边界
+
+| 表达 | 是否 path-only 授权 |
+|---|---|
+| `one-click-copy` | 否；`one-click-copy = 完整正文单代码块` |
+| `path-only` 显式声明 | 是；Human Owner 当前消息必须含"只给路径"或"短指针"等明确表达 |
+| `简洁` / `赶快` / `一键复制` | 否；三种非授权表达 |
+| `尽快` / `快速` / `简短点` | 否；催促性表达不构成授权 |
+
+### 10.4 上下文压缩后的契约重读
+
+上下文压缩后必须重新读取 `runtime-compliance-contracts.md` 与对应契约的 `required_reads`；不得依赖压缩摘要声称已满足契约。门禁无法判断是否满足 = 失败关闭。
+
+### 10.5 失败升级路径
+
+| 失败类型 | Escalation |
+|---|---|
+| 字段缺失 | `Escalation: contract-field-missing` → 写入 Gap |
+| 渠道失败 | `Escalation: dual-output-failed` → 不得输出成功状态 |
+| 授权不明 | `Escalation: abbreviation-grant-unclear` → 走 L2 Pending Update |
+| 禁止项触发 | `Escalation: forbidden-shortcut` → 停止发送并请求 L1 澄清 |
+| 错误成功状态 | `Escalation: forbidden-success-state` → 清除状态声明并修复 |
+
+### 10.6 静态校验
+
+- 验证器 `SI-14` 机器检查 6 类契约、10 字段、8 步门禁、关键语义、错误成功状态。
+- 删除或弱化任一字段 → 退出非 0。
+- 8 步门禁步骤命名不唯一或缺任一 → 退出非 0。
+- 三种非授权表达（`简洁` / `赶快` / `一键复制`）任一不在文档中 → 退出非 0。
+- 双输出失败关闭语义不在文档中 → 退出非 0。
+- 错误成功状态列表（`issued` / `accepted` / `complete` / `done` / `finished`）任一不在文档中 → 退出非 0。

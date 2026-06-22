@@ -61,12 +61,12 @@ const POLLUTION_PATTERNS = [
   { pattern: /IN-20260618/, label: 'ID: IN-20260618' },
   // Action IDs
   { pattern: /ACT-001/, label: 'ID: ACT-001' },
-  // Risk IDs
-  { pattern: /R-001/, label: 'ID: R-001' },
-  { pattern: /R-002/, label: 'ID: R-002' },
-  { pattern: /R-003/, label: 'ID: R-003' },
-  { pattern: /R-004/, label: 'ID: R-004' },
-  { pattern: /R-005/, label: 'ID: R-005' },
+  // Risk IDs (require word boundary to avoid matching inside COC-PQR-###)
+  { pattern: /\bR-001\b/, label: 'ID: R-001' },
+  { pattern: /\bR-002\b/, label: 'ID: R-002' },
+  { pattern: /\bR-003\b/, label: 'ID: R-003' },
+  { pattern: /\bR-004\b/, label: 'ID: R-004' },
+  { pattern: /\bR-005\b/, label: 'ID: R-005' },
   // Assumption IDs
   { pattern: /A-001/, label: 'ID: A-001' },
   { pattern: /A-002/, label: 'ID: A-002' },
