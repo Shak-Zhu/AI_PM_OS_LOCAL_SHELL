@@ -33,19 +33,20 @@
 | `references/conflict-and-chaos-rules.md` | 四类冲突、六类缺失、五类命名违规、五类脏工作树、Markdown/JSON 冲突方向（C-01~C-04、M-01~M-06、N-01~N-05、D-01~D-05） | 无 |
 | `references/command-and-approval-rules.md` | 三层路由、六 Gate 状态、九审批状态、九类角色权限矩阵、十二 P0 工作流标准对象、未授权请求失败关闭 | 无 |
 | `references/project-workflow-rules.md` | INIT/INTAKE/APPLY/TAKEOVER/AUDIT 五个 P0 基础工作流行为契约，含 P0/P1 边界声明 | 无 |
+| `references/communication-and-reporting-rules.md` | BRIEFING/MEETING/TODO/REPORT_DAILY/REPORT_PERIODIC/DASHBOARD_SYNC 六个 P0 专业工作流行为契约，含 9 字段、质量检查、事实来源禁止编造规则 | 无 |
 | `references/install-and-invoke.md` | 安装与调用说明 | 无 |
 
 ### 1.3 行为场景（scenarios/）
 
 | 文件 | 用途 | 包外依赖 |
 |---|---|---|
-| `scenarios/scenarios.md` | 90 个结构化 Given/When/Then/Allow/Forbid/Evidence 场景（60 原 + 10 WP-006 新增 + 10 WP-007 新增 + 10 WP-008 新增） | 无 |
+| `scenarios/scenarios.md` | 102 个结构化 Given/When/Then/Allow/Forbid/Evidence 场景（60 原 + 10 WP-006 新增 + 10 WP-007 新增 + 10 WP-008 新增 + 12 WP-009 新增） | 无 |
 
 ### 1.4 包内验证脚本（scripts/）
 
 | 文件 | 用途 | 说明 |
 |---|---|---|
-| `scripts/validate-skill.js` | SI-01~SI-40 机器可验证规则；自包含运行（无外部包依赖）；支持隔离模式（无宿主文件时跳过 AGENTS.md/_AI_GLOBAL_MEMORY/ 检查） | 唯一验证实现 |
+| `scripts/validate-skill.js` | SI-01~SI-48 机器可验证规则；自包含运行（无外部包依赖）；支持隔离模式（无宿主文件时跳过 AGENTS.md/_AI_GLOBAL_MEMORY/ 检查） | 唯一验证实现 |
 
 **注意**：`scripts/check-pollution.js` 不属于包内文件；它是根目录仓库 QA 适配器，需要宿主项目的 `_DEV_PROJECT_CONTROL/` 等文件，不在独立包安装范围内。
 

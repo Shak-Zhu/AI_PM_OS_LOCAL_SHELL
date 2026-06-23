@@ -17,6 +17,7 @@ Gate 结果状态定义见 `command-and-approval-rules.md` §2。
 12 个 P0 工作流完整对象定义见 `command-and-approval-rules.md` §3。
 审批状态机与角色矩阵见 `command-and-approval-rules.md` §4~§5。
 INIT/INTAKE/APPLY/TAKEOVER/AUDIT 五个 P0 工作流的具体行为契约与 P0/P1 边界见 `references/project-workflow-rules.md`。
+BRIEFING/MEETING/TODO/REPORT_DAILY/REPORT_PERIODIC/DASHBOARD_SYNC 六个 P0 专业工作流的具体行为契约与质量检查见 `references/communication-and-reporting-rules.md`。
 
 ## 1. 路由表
 

@@ -1589,3 +1589,184 @@
 - **Allow**: 识别命名违规；声明 P1 边界；Draft 报告生成。
 - **Forbid**: 将 P1 深度审计写成 P0 已实现；直接修复命名违规而不记录。
 - **Evidence**: `PM_AUDIT_REPORT.md` P0/P1 边界声明；命名违规 Gap 条目。
+
+## 91. BRIEFING P0：Daily Briefing 输出 3~5 个建议动作
+
+- **ID**: SC-RP-01
+- **Framework**: PMO + PMP/PMBOK + communication-and-reporting-rules
+- **Given**: 用户说"今日 briefing"或"今天要做什么"；`PM_CURRENT_STATUS.md`、`04_TODO/`、`PM_RAID_LOG.md`、`PM_APPROVAL_STATUS.md` 存在。
+- **When**: BRIEFING 读取所有必读文件并生成每日建议。
+- **Then**:
+  1. 生成 3~5 个优先级排序的建议动作（每个含 action_title、owner 建议、due_date 建议、priority）；
+  2. 输出待催办列表（已批准但逾期的 Action）；
+  3. 输出待审批提醒（Proposed PU 超过 7 天未审批）；
+  4. 输出风险/问题提醒（severity=High 且 status=Open 的 Risk/Issue）；
+  5. 若识别到需同步讨论的议题，输出结构化会议建议（含 7 字段：background、participants、objective、agenda、materials、outputs、done_criteria）。
+- **Allow**: 建议性输出；Gap 条目生成；用户确认后 To-do 才写入正式文件。
+- **Forbid**: 直接写入正式文件；编造不存在的 Action/Risk/Decision；跳过 Active Context。
+- **Evidence**: Briefing 输出内容；会议建议 7 字段完整性。
+
+## 92. BRIEFING P0：无可用数据时输出空白 Briefing 并标注 Gap
+
+- **ID**: SC-RP-02
+- **Framework**: PMO + communication-and-reporting-rules
+- **Given**: 用户说"今日 briefing"；`PM_CURRENT_STATUS.md` 存在但无 To-do、无 RAID 条目、无审批数据。
+- **When**: BRIEFING preflight 确认无可用数据。
+- **Then**:
+  1. 输出空白 Briefing（含来源窗口）；
+  2. 标注 `Gap: insufficient-data-for-briefing`；
+  3. 提示用户执行 INIT 或 TAKEOVER。
+- **Allow**: 空白 Briefing；Gap 标注。
+- **Forbid**: 编造建议动作；编造待催办/待审批内容。
+- **Evidence**: Briefing Gap 标注内容。
+
+## 93. MEETING P0：Transcript 处理输出五件套且禁止未确认 Decision 进入 Approved
+
+- **ID**: SC-RP-03
+- **Framework**: PMP/PMBOK + PMO + communication-and-reporting-rules
+- **Given**: 用户粘贴会议 transcript 并要求"处理这份 transcript"；`PM_MEETING_INDEX.md`、`PM_RAID_LOG.md`、`PM_DOCUMENT_REGISTRY.md` 存在。
+- **When**: MEETING 处理 transcript；preflight 确认 transcript 可读。
+- **Then**:
+  1. 归档原始 transcript 到 `03_MEETINGS/transcripts/`；
+  2. 生成 Draft 会议纪要（标题、时间、地点、与会人员、议程、讨论要点、Action 列表、Decision 列表）；
+  3. 追加 Meeting Index 条目；
+  4. 追加 Action/Risk 条目到 `PM_RAID_LOG.md`（Draft 状态）；
+  5. 追加文档注册条目；
+  6. 若识别到变更请求，追加 PU 草案到 `PM_PENDING_UPDATES.md`；
+  7. 未确认 Decision 不得写入 `PM_DECISION_LOG.md`，而是进入 `PM_PENDING_UPDATES.md`。
+- **Allow**: Draft 会议纪要；Action/Decision 草案进入 PU 流程。
+- **Forbid**: 未确认 Decision 直接写入 Approved Decision；跳过 PU 直接修改 Scope；为不可读 transcript 生成虚构内容。
+- **Evidence**: 会议纪要；Meeting Index 条目；Action 条目；PU 草案。
+
+## 94. MEETING P0：不可读 Transcript 记录为 unreadable
+
+- **ID**: SC-RP-04
+- **Framework**: PMP/PMBOK + communication-and-reporting-rules
+- **Given**: 用户粘贴"transcript"但内容为空或乱码；`PM_MEETING_INDEX.md` 存在。
+- **When**: MEETING preflight 确认 transcript 不可读。
+- **Then**:
+  1. 记录 `source_fingerprint: unreadable`；
+  2. 不生成任何会议纪要、Action 或 Decision；
+  3. 输出 `L1: Error: transcript unreadable`。
+- **Allow**: 正常退出；unreadable 标记。
+- **Forbid**: 生成虚构会议纪要；生成虚构 Action/Decision。
+- **Evidence**: `PM_MEETING_INDEX.md` 条目内容。
+
+## 95. TODO P0：To-do 10 字段完整与跨日滚动规则
+
+- **ID**: SC-RP-05
+- **Framework**: PMP/PMBOK + communication-and-reporting-rules
+- **Given**: 用户说"生成今日 To-do"；`04_TODO/`、`PM_RAID_LOG.md`、`PM_APPROVAL_STATUS.md` 存在；昨日 To-do 有未完成项。
+- **When**: TODO 执行跨日滚动并生成今日 To-do。
+- **Then**:
+  1. 识别昨日 To-do 中状态为 Open 的条目；
+  2. 每个未完成条目：复制到今日 To-do，设置 `status: Open`，`carry_over_from: [原todo_id]`；
+  3. 识别 `PM_RAID_LOG.md` 中新产生的 Open Action；
+  4. 生成今日 To-do 文件（含全部 10 字段：todo_id、title、source、owner、due_date、status、next_step、carry_over_from、related_action、updated_at）。
+- **Allow**: 跨日滚动；新 Action 同步；Draft To-do 生成。
+- **Forbid**: 跨日自动归档不保留 carry_over_from；跳过 Active Context；编造不存在的 Action。
+- **Evidence**: 今日 To-do 文件；carry_over_from 字段存在性。
+
+## 96. TODO P0：To-do 字段缺失时标注 Gap
+
+- **ID**: SC-RP-06
+- **Framework**: PMP/PMBOK + communication-and-reporting-rules
+- **Given**: 用户要求生成 To-do；`04_TODO/` 目录存在但所有 To-do 条目缺少 `next_step` 字段。
+- **When**: TODO 验证 To-do 字段完整性。
+- **Then**:
+  1. 标注 `Gap: todo-missing-next_step`；
+  2. 输出缺失字段的 To-do 列表；
+  3. 提示用户补全后重试。
+- **Allow**: Gap 标注；提示补全。
+- **Forbid**: 静默填充 `next_step` 为空值；跳过字段验证。
+- **Evidence**: Gap 条目内容。
+
+## 97. REPORT_DAILY P0：日报 Markdown + HTML，缺数据时 fail-closed
+
+- **ID**: SC-RP-07
+- **Framework**: PMO + PMP/PMBOK + communication-and-reporting-rules
+- **Given**: 用户要求"生成日报"；当日有 To-do/Action/Meeting Minutes 数据。
+- **When**: REPORT_DAILY 生成日报；preflight 确认有来源数据。
+- **Then**:
+  1. 标注来源窗口（具体日期，如 `2026-06-23`）；
+  2. 生成 Draft Markdown 日报（含日期、已完成、进行中、问题、明日计划）；
+  3. 生成 Draft HTML 日报；
+  4. 所有事实陈述附文件来源。
+- **Allow**: Draft 报告生成；Gap 标注无来源内容。
+- **Forbid**: 编造不存在的 Action/Risk/会议；修改历史日报；自动生成 HTML PPT（除非用户明确要求）。
+- **Evidence**: 日报 Markdown/HTML 内容；来源窗口标注。
+
+## 98. REPORT_DAILY P0：日报无数据时 fail-closed 而非空白编造
+
+- **ID**: SC-RP-08
+- **Framework**: PMO + communication-and-reporting-rules
+- **Given**: 用户要求"生成日报"；当日无任何 To-do/Action/Meeting Minutes 数据。
+- **When**: REPORT_DAILY preflight 确认无来源数据。
+- **Then**:
+  1. 输出 `Gap: no-source-for-daily-report`；
+  2. 标注来源窗口；
+  3. 生成空白日报模板（不填入任何编造内容）。
+- **Allow**: 空白模板；Gap 标注。
+- **Forbid**: 编造已完成工作；用"暂无数据"代替实际内容而不标注 Gap。
+- **Evidence**: Gap 标注；空白模板。
+
+## 99. REPORT_PERIODIC P0：周报 Markdown + HTML + HTML PPT
+
+- **ID**: SC-RP-09
+- **Framework**: PMO + PMP/PMBOK + APM + communication-and-reporting-rules
+- **Given**: 用户要求"生成周报"；周内有 3 份日报或 5 个 Action。
+- **When**: REPORT_PERIODIC 生成周报。
+- **Then**:
+  1. 标注来源窗口（起止日期，如 `2026-06-16 ~ 2026-06-22`）；
+  2. 生成 Draft Markdown 周报；
+  3. 生成 Draft HTML 周报；
+  4. 生成 HTML PPT 周报（默认强制，与 Markdown/HTML 同文件名不同格式）；
+  5. 汇总周内 Action 趋势、风险、PU 状态。
+- **Allow**: 三格式报告生成；Gap 标注不可用数据。
+- **Forbid**: 跳过 HTML PPT 生成；编造 Sprint/Velocity 数据（无 Sprint 数据时）；修改历史日报。
+- **Evidence**: 周报三格式文件；来源窗口；HTML PPT 存在。
+
+## 100. REPORT_PERIODIC P0：月报/管理层汇报 HTML PPT 强制
+
+- **ID**: SC-RP-10
+- **Framework**: PMO + communication-and-reporting-rules
+- **Given**: 用户要求"生成月报"或"生成管理层汇报"；月内有日报数据。
+- **When**: REPORT_PERIODIC 生成月报或管理层汇报。
+- **Then**:
+  1. 标注报告窗口和受众（管理汇报需标注受众，如 `Q2 2026 / 管理层`）；
+  2. 生成 Markdown + HTML + HTML PPT 三格式；
+  3. 管理层汇报经 Sponsor Approver 审批。
+- **Allow**: 三格式生成；审批路径。
+- **Forbid**: 月报缺 HTML PPT；管理层汇报状态写为 Approved（需 Sponsor Approver）。
+- **Evidence**: 三格式报告文件；受众标注。
+
+## 101. REPORT_STEERING P0：管理层汇报默认 Markdown + HTML + HTML PPT
+
+- **ID**: SC-RP-11
+- **Framework**: PMO + PMP/PMBOK + communication-and-reporting-rules
+- **Given**: 用户要求"生成管理层汇报"或"Steering Committee 汇报"；周报、月报和里程碑数据存在。
+- **When**: REPORT_STEERING 生成管理层汇报；preflight 确认受众和报告窗口可定位。
+- **Then**:
+  1. 标注报告窗口和受众（如 `Q2 2026 / 管理层`）；
+  2. 生成 Draft Markdown 管理层汇报（含周报/月报汇总、里程碑、Action 趋势、风险）；
+  3. 生成 Draft HTML 管理层汇报；
+  4. 生成 HTML PPT 管理层汇报；
+  5. 所有数据必须有可追踪文件来源；无来源或仅聊天记忆的内容必须标注 `Gap：来源为用户口述`。
+- **Allow**: 三格式报告生成；Gap 标注；Sponsor Approver 审批路径。
+- **Forbid**: 管理层汇报状态写为 Approved（须经 Sponsor Approver 审批）；编造 KPI/RAG/里程碑/风险/Action/Decision；使用聊天记忆作为数据来源。
+- **Evidence**: 管理层汇报三格式文件；受众标注；Sponsor Approver 审批状态。
+
+## 102. REPORT P0：报告缺来源 fail-closed，覆盖 Periodic/Steering 无来源或仅聊天记忆
+
+- **ID**: SC-RP-12
+- **Framework**: PMO + communication-and-reporting-rules
+- **Given**: 用户要求生成周报或管理层汇报；期间内无任何正式记录（无日报、无 Action、无会议纪要）。
+- **When**: REPORT_PERIODIC 或 REPORT_STEERING preflight 确认无来源数据。
+- **Then**:
+  1. 输出 `Gap: no-source-for-[report-type]` 并标注内容；
+  2. 标注报告窗口；
+  3. 生成空白报告模板（不填入任何编造内容）；
+  4. 若来源仅来自聊天记忆，标注 `Gap：来源为用户口述`，不得将聊天内容作为正式数据。
+- **Allow**: 空白模板；Gap 标注；报告窗口标注。
+- **Forbid**: 编造已完成工作；用"暂无数据"代替实际内容而不标注 Gap；跳过 fail-closed 直接输出虚假数据。
+- **Evidence**: Gap 标注内容；空白模板。

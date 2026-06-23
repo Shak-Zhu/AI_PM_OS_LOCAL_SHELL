@@ -27,8 +27,8 @@ const path = require('path');
 // WP-005: Extended to 60 (added 10 execution-integrity scenarios SC-EI-01..10).
 // WP-006: Extended to 70 (added 10 conflict/scenarios SC-CHX-01..10).
 // WP-007: Extended to 80 (added 10 command/routing scenarios SC-CMD-01..10).
-// WP-008: Extended to 90 (added 10 workflow scenarios SC-WF-01..10).
-const EXPECTED_SCENARIO_COUNT = 90;
+// WP-009: Extended to 102 (added 12 communication/reporting scenarios SC-RP-01..12).
+const EXPECTED_SCENARIO_COUNT = 102;
 
 // Required files inside the ai-pm-os/ package
 const REQUIRED_FILES = [
@@ -46,6 +46,7 @@ const REQUIRED_FILES = [
   'ai-pm-os/references/conflict-and-chaos-rules.md',
   'ai-pm-os/references/command-and-approval-rules.md',
   'ai-pm-os/references/project-workflow-rules.md',
+  'ai-pm-os/references/communication-and-reporting-rules.md',
   'ai-pm-os/scenarios/scenarios.md',
 ];
 const REQUIRED_CAPABILITY_TAGS = [
@@ -3561,8 +3562,8 @@ function checkSemanticInvariant40(baseDir) {
     if (m) headingNums.push(parseInt(m[1], 10));
   }
 
-  if (headingNums.length !== 90) {
-    errors.push('SI-40: found ' + headingNums.length + '/90 scenario headings');
+  if (headingNums.length !== EXPECTED_SCENARIO_COUNT) {
+    errors.push('SI-40: found ' + headingNums.length + '/' + EXPECTED_SCENARIO_COUNT + ' scenario headings');
   }
 
   // Check SC-WF-01 through SC-WF-10
@@ -3570,6 +3571,484 @@ function checkSemanticInvariant40(baseDir) {
     const id = 'SC-WF-' + String(i).padStart(2, '0');
     if (!scenariosContent.includes(id)) {
       errors.push('SI-40: scenario ID "' + id + '" not found');
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-41: communication-and-reporting-rules.md in REQUIRED_FILES (WP-009)
+ *
+ * Verifies the new rules file is registered in REQUIRED_FILES.
+ *
+ * PASSES when: the file path appears in REQUIRED_FILES array.
+ * FAILS when: the file is not in REQUIRED_FILES.
+ */
+function checkSemanticInvariant41(baseDir) {
+  const filePath = 'ai-pm-os/references/communication-and-reporting-rules.md';
+  const scriptPath = path.join(baseDir, 'ai-pm-os', 'scripts', 'validate-skill.js');
+  const scriptContent = readSafe(scriptPath) || '';
+  const errors = [];
+
+  if (!scriptContent.includes(filePath)) {
+    errors.push('SI-41: "' + filePath + '" not found in REQUIRED_FILES');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-42: 6 P0 Workflow Objects in communication-and-reporting-rules.md (WP-009)
+ *
+ * Verifies that communication-and-reporting-rules.md contains exactly 6 workflow blocks
+ * (## WF-P0-0X:) with the following IDs: BRIEFING, MEETING, TODO, REPORT_DAILY,
+ * REPORT_PERIODIC, DASHBOARD_SYNC.
+ *
+ * Each workflow must have exactly 9 subsections:
+ *   workflow_id (in heading) + 8 standard subsections
+ *   (entry_triggers, required_reads, preflight_gates, allowed_outputs,
+ *    forbidden_outputs, state_transitions, failure_escalation, quality_checks)
+ *
+ * PASSES when: 6 blocks found, IDs correct, 8 subsections each.
+ * FAILS when: wrong count, wrong IDs, wrong subsection count.
+ */
+function checkSemanticInvariant42(baseDir) {
+  const crrPath = path.join(baseDir, 'ai-pm-os', 'references', 'communication-and-reporting-rules.md');
+  const crrContent = readSafe(crrPath) || '';
+  const errors = [];
+
+  const REQUIRED_WF_IDS = ['BRIEFING', 'MEETING', 'TODO', 'REPORT_DAILY', 'REPORT_PERIODIC', 'REPORT_STEERING'];
+  const VALID_SUBSECTIONS = [
+    'entry_triggers', 'required_reads', 'preflight_gates',
+    'allowed_outputs', 'forbidden_outputs', 'state_transitions',
+    'failure_escalation', 'quality_checks',
+  ];
+  const validSubCountForWorkflow = {
+    'BRIEFING': 8, 'MEETING': 8, 'TODO': 8,
+    'REPORT_DAILY': 8, 'REPORT_PERIODIC': 8, 'REPORT_STEERING': 9,
+  };
+
+  // QC-F-100: DASHBOARD_SYNC must NOT appear as a workflow block in communication-and-reporting-rules.md
+  if (crrContent.includes('## WF-P0-06: DASHBOARD_SYNC') ||
+      crrContent.match(/## WF-P0-\d+:\s+DASHBOARD_SYNC/)) {
+    errors.push('SI-42: DASHBOARD_SYNC found in communication-and-reporting-rules.md (WP-009 scope violation)');
+  }
+
+  // Split into blocks by ## WF-P0-0X: headings
+  const blockRe = /## WF-P0-\d+:/gm;
+  const blockPositions = [];
+  let m;
+  while ((m = blockRe.exec(crrContent)) !== null) {
+    blockPositions.push(m.index);
+  }
+  blockPositions.push(crrContent.length); // sentinel
+
+  if (blockPositions.length - 1 !== 6) {
+    errors.push('SI-42: found ' + (blockPositions.length - 1) + '/6 workflow blocks');
+    return errors;
+  }
+
+  const wfIdsFound = [];
+
+  for (let i = 0; i < blockPositions.length - 1; i++) {
+    const blockText = crrContent.substring(blockPositions[i], blockPositions[i + 1]);
+
+    // Extract workflow_id from heading
+    const headingMatch = blockText.match(/## WF-P0-\d+:\s+(\S+)/);
+    const wfId = headingMatch ? headingMatch[1].trim() : '';
+    wfIdsFound.push(wfId);
+
+    // Count subsections — use the function-level validSubCountForWorkflow.
+    // Extract subsection headings (### field) — line-start required, no table cells.
+    const subsectionMatches = (blockText.match(/^### \w[^\n]*(?:\n|$)/gm) || [])
+      .filter(m => !m.includes('|'));
+    const expectedCount = validSubCountForWorkflow[wfId] || 8;
+    if (subsectionMatches.length !== expectedCount) {
+      errors.push('SI-42: workflow "' + wfId + '" has ' + subsectionMatches.length + ' subsections (expected ' + expectedCount + ')');
+    }
+
+    // Check for duplicate subsections
+    const seen = new Set();
+    for (const sub of subsectionMatches) {
+      const name = sub.replace(/^###\s+/, '');
+      if (seen.has(name)) {
+        errors.push('SI-42: workflow "' + wfId + '" has duplicate subsection "### ' + name + '"');
+      }
+      seen.add(name);
+    }
+
+    // Verify all 8 required subsections present and non-empty
+    for (const field of VALID_SUBSECTIONS) {
+      if (!blockText.includes('\n### ' + field + '\n') && !blockText.includes('\n### ' + field + '\r')) {
+        // Subsection heading must exist at line start
+        const subLineRe = new RegExp('^### ' + field + '(\\s|$)', 'm');
+        if (!subLineRe.test(blockText)) {
+          errors.push('SI-42: workflow "' + wfId + '" missing subsection "### ' + field + '"');
+        } else {
+          // Check non-empty: find subsection and verify it has content
+          const subStart = blockText.search(subLineRe);
+          const nextSub = blockText.indexOf('\n### ', subStart + 1);
+          const endIdx = nextSub > 0 ? nextSub : blockText.length;
+          const subContent = blockText.substring(subStart, endIdx).trim();
+          if (subContent === '### ' + field || subContent === '### ' + field + '\n' || subContent === '### ' + field + '\r') {
+            errors.push('SI-42: workflow "' + wfId + '" subsection "### ' + field + '" is empty');
+          }
+        }
+      }
+    }
+  }
+
+  // Check all 6 IDs present
+  for (const id of REQUIRED_WF_IDS) {
+    if (!wfIdsFound.includes(id)) {
+      errors.push('SI-42: workflow ID "' + id + '" missing');
+    }
+  }
+
+  // Check for duplicate IDs
+  const seenIds = new Set();
+  for (const id of wfIdsFound) {
+    if (seenIds.has(id)) {
+      errors.push('SI-42: duplicate workflow_id "' + id + '"');
+    }
+    seenIds.add(id);
+  }
+
+  // Check for unknown IDs
+  for (const id of wfIdsFound) {
+    if (!REQUIRED_WF_IDS.includes(id)) {
+      errors.push('SI-42: unknown workflow_id "' + id + '"');
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-43: Meeting transcript output five-piece set + no unconfirmed Decision → Approved (WP-009)
+ *
+ * Verifies the MEETING block in communication-and-reporting-rules.md contains:
+ *   (a) Meeting minutes output mentioned
+ *   (b) Action summary output mentioned
+ *   (c) Decision summary output mentioned
+ *   (d) Meeting Index update rule mentioned
+ *   (e) Pending Updates draft rule (for unconfirmed decisions)
+ *   (f) Forbidden: unconfirmed Decision directly → Approved
+ *
+ * PASSES when: all 5 outputs + forbidden unconfirmed→Approved rule exist.
+ * FAILS when: any required element missing or forbidden rule absent.
+ */
+function checkSemanticInvariant43(baseDir) {
+  const crrPath = path.join(baseDir, 'ai-pm-os', 'references', 'communication-and-reporting-rules.md');
+  const crrContent = readSafe(crrPath) || '';
+  const errors = [];
+
+  const meetingStart = crrContent.indexOf('## WF-P0-02: MEETING');
+  if (meetingStart < 0) {
+    errors.push('SI-43: MEETING block not found');
+    return errors;
+  }
+  const meetingEnd = crrContent.indexOf('## WF-P0-03:', meetingStart + 1);
+  const meetingSection = crrContent.substring(meetingStart, meetingEnd > 0 ? meetingEnd : crrContent.length);
+
+  // (a) Meeting minutes
+  if (!meetingSection.includes('会议纪要') && !meetingSection.includes('meeting minutes')) {
+    errors.push('SI-43: MEETING allowed_outputs missing meeting minutes');
+  }
+  // (b) Action summary
+  if (!meetingSection.includes('Action') && !meetingSection.includes('RAID')) {
+    errors.push('SI-43: MEETING allowed_outputs missing Action summary');
+  }
+  // (c) Decision summary
+  if (!meetingSection.includes('Decision') && !meetingSection.includes('决策')) {
+    errors.push('SI-43: MEETING allowed_outputs missing Decision summary');
+  }
+  // (d) Meeting Index update
+  if (!meetingSection.includes('Meeting Index') && !meetingSection.includes('MEETING_INDEX')) {
+    errors.push('SI-43: MEETING allowed_outputs missing Meeting Index update');
+  }
+  // (e) Pending Updates draft for unconfirmed decisions
+  if (!meetingSection.includes('PM_PENDING_UPDATES') && !meetingSection.includes('PU') && !meetingSection.includes('Pending Updates')) {
+    errors.push('SI-43: MEETING allowed_outputs missing Pending Updates for unconfirmed decisions');
+  }
+  // (f) Forbidden: unconfirmed Decision → Approved.
+  // Check the ### forbidden_outputs subsection specifically for the key bullet point:
+  // "禁止将未确认 Decision 直接写入 Approved Decision"
+  // Use the subsection extraction approach to avoid multi-line regex bleed.
+  const forbStart = meetingSection.indexOf('### forbidden_outputs');
+  const forbEnd = meetingSection.indexOf('### state_transitions', forbStart);
+  const forbSection = forbStart >= 0
+    ? meetingSection.substring(forbStart, forbEnd > 0 ? forbEnd : meetingSection.length)
+    : meetingSection;
+
+  const forbies = forbSection.match(/\*\*禁止\*\*[^\n]*/g) || [];
+  const hasUnconfForbidden = forbies.some(f =>
+    (f.includes('Decision') || f.includes('未确认') || f.includes('Approved') || f.includes('Decision Log'))
+  );
+  if (!hasUnconfForbidden) {
+    errors.push('SI-43: MEETING forbidden_outputs missing unconfirmed→Approved Decision rule');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-44: Daily Briefing 3~5 actions + meeting suggestion 7-field existence (WP-009)
+ *
+ * Verifies the BRIEFING block in communication-and-reporting-rules.md contains:
+ *   (a) 3~5 recommended actions (or count constraint)
+ *   (b) pending催办/审批/风险提醒
+ *   (c) Meeting suggestion with 7 required fields: background, participants, objective, agenda, materials, outputs, done_criteria
+ *
+ * PASSES when: all required elements found.
+ * FAILS when: any required element missing.
+ */
+function checkSemanticInvariant44(baseDir) {
+  const crrPath = path.join(baseDir, 'ai-pm-os', 'references', 'communication-and-reporting-rules.md');
+  const crrContent = readSafe(crrPath) || '';
+  const errors = [];
+
+  const briefingStart = crrContent.indexOf('## WF-P0-01: BRIEFING');
+  if (briefingStart < 0) {
+    errors.push('SI-44: BRIEFING block not found');
+    return errors;
+  }
+  const briefingEnd = crrContent.indexOf('## WF-P0-02:', briefingStart + 1);
+  const briefingSection = crrContent.substring(briefingStart, briefingEnd > 0 ? briefingEnd : crrContent.length);
+
+  // (a) 3~5 recommended actions
+  const hasActionCount = briefingSection.includes('3~5') || briefingSection.includes('3-5') || briefingSection.includes('不超过 5');
+  if (!hasActionCount) {
+    errors.push('SI-44: BRIEFING quality_checks missing 3~5 action count constraint');
+  }
+
+  // (b) 催办/审批/风险 reminders
+  if (!briefingSection.includes('催办') && !briefingSection.includes('审批') && !briefingSection.includes('风险')) {
+    errors.push('SI-44: BRIEFING allowed_outputs missing 催办/审批/风险 reminders');
+  }
+
+  // (c) Meeting suggestion 7 fields
+  const sevenFields = ['background', 'participants', 'objective', 'agenda', 'materials', 'outputs', 'done_criteria'];
+  for (const field of sevenFields) {
+    if (!briefingSection.includes(field)) {
+      errors.push('SI-44: BRIEFING meeting suggestion missing field: ' + field);
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-45: To-do 10 fields and carry-over rule existence (WP-009)
+ *
+ * Verifies the TODO block in communication-and-reporting-rules.md contains:
+ *   (a) All 10 required To-do fields: todo_id, title, source, owner, due_date, status, next_step, carry_over_from, related_action, updated_at
+ *   (b) Carry-over rule (跨日滚动 must preserve carry_over_from)
+ *
+ * PASSES when: all 10 fields + carry-over rule found.
+ * FAILS when: any field or carry-over rule missing.
+ */
+function checkSemanticInvariant45(baseDir) {
+  const crrPath = path.join(baseDir, 'ai-pm-os', 'references', 'communication-and-reporting-rules.md');
+  const crrContent = readSafe(crrPath) || '';
+  const errors = [];
+
+  const todoStart = crrContent.indexOf('## WF-P0-03: TODO');
+  if (todoStart < 0) {
+    errors.push('SI-45: TODO block not found');
+    return errors;
+  }
+  const todoEnd = crrContent.indexOf('## WF-P0-04:', todoStart + 1);
+  const todoSection = crrContent.substring(todoStart, todoEnd > 0 ? todoEnd : crrContent.length);
+
+  const tenFields = [
+    'todo_id', 'title', 'source', 'owner', 'due_date',
+    'status', 'next_step', 'carry_over_from', 'related_action', 'updated_at',
+  ];
+  for (const field of tenFields) {
+    if (!todoSection.includes(field)) {
+      errors.push('SI-45: TODO quality_checks missing field: ' + field);
+    }
+  }
+
+  // Carry-over rule
+  if (!todoSection.includes('carry_over_from')) {
+    errors.push('SI-45: TODO forbidden_outputs missing carry_over_from preservation rule');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-46: Report format boundaries — REPORT_DAILY, REPORT_PERIODIC, REPORT_STEERING (WP-009-R1)
+ *
+ * Verifies:
+ *   (a) REPORT_DAILY: Markdown + HTML, HTML PPT NOT mandatory (only on explicit request)
+ *   (b) REPORT_PERIODIC (weekly/monthly): Markdown + HTML + HTML PPT (all three required)
+ *   (c) REPORT_STEERING: Markdown + HTML + HTML PPT (all three required)
+ *   (d) Sponsor Approver rule for REPORT_STEERING
+ *   (e) REPORT_STEERING gap/fail-closed for no-source or chat-memory-only
+ *
+ * PASSES when: all checks pass.
+ * FAILS when: any constraint violated.
+ */
+function checkSemanticInvariant46(baseDir) {
+  const crrPath = path.join(baseDir, 'ai-pm-os', 'references', 'communication-and-reporting-rules.md');
+  const crrContent = readSafe(crrPath) || '';
+  const errors = [];
+
+  // REPORT_DAILY: Markdown + HTML, HTML PPT NOT mandatory
+  const dailyStart = crrContent.indexOf('## WF-P0-04: REPORT_DAILY');
+  if (dailyStart < 0) {
+    errors.push('SI-46: REPORT_DAILY block not found');
+  } else {
+    const dailyEnd = crrContent.indexOf('## WF-P0-05:', dailyStart + 1);
+    const dailySection = crrContent.substring(dailyStart, dailyEnd > 0 ? dailyEnd : crrContent.length);
+    if (dailySection.includes('HTML PPT') && dailySection.includes('必须') &&
+        !dailySection.includes('不作为 P0') && !dailySection.includes('仅在用户')) {
+      errors.push('SI-46: REPORT_DAILY HTML PPT must NOT be mandatory');
+    }
+  }
+
+  // REPORT_PERIODIC: Markdown + HTML + HTML PPT (weekly/monthly only, no steering)
+  const periodicStart = crrContent.indexOf('## WF-P0-05: REPORT_PERIODIC');
+  if (periodicStart < 0) {
+    errors.push('SI-46: REPORT_PERIODIC block not found');
+  } else {
+    const periodicEnd = crrContent.indexOf('## WF-P0-06:', periodicStart + 1);
+    const periodicSection = crrContent.substring(periodicStart, periodicEnd > 0 ? periodicEnd : crrContent.length);
+    const hasMarkdown = periodicSection.includes('Markdown') || periodicSection.includes('markdown');
+    const hasHTML = periodicSection.includes('HTML');
+    const hasPPTHTML = periodicSection.includes('HTML PPT');
+    if (!hasMarkdown) errors.push('SI-46: REPORT_PERIODIC missing Markdown format');
+    if (!hasHTML) errors.push('SI-46: REPORT_PERIODIC missing HTML format');
+    if (!hasPPTHTML) errors.push('SI-46: REPORT_PERIODIC missing HTML PPT format');
+    // No steering output in REPORT_PERIODIC (scope separation)
+    if (periodicSection.includes('PM_STEERING_REPORT')) {
+      errors.push('SI-46: REPORT_PERIODIC must not include steering report outputs');
+    }
+  }
+
+  // REPORT_STEERING: Markdown + HTML + HTML PPT + Sponsor Approver + fail-closed gap
+  const steeringStart = crrContent.indexOf('## WF-P0-06: REPORT_STEERING');
+  if (steeringStart < 0) {
+    errors.push('SI-46: REPORT_STEERING block not found');
+  } else {
+    const steeringSection = crrContent.substring(steeringStart);
+    const hasMarkdown = steeringSection.includes('Markdown') || steeringSection.includes('markdown');
+    const hasHTML = steeringSection.includes('HTML');
+    const hasPPTHTML = steeringSection.includes('HTML PPT');
+    if (!hasMarkdown) errors.push('SI-46: REPORT_STEERING missing Markdown format');
+    if (!hasHTML) errors.push('SI-46: REPORT_STEERING missing HTML format');
+    if (!hasPPTHTML) errors.push('SI-46: REPORT_STEERING missing HTML PPT format');
+    // Sponsor Approver rule
+    if (!steeringSection.includes('Sponsor Approver') && !steeringSection.includes('Sponsor Approver')) {
+      errors.push('SI-46: REPORT_STEERING missing Sponsor Approver rule');
+    }
+    // Fail-closed / Gap rule for no source
+    const hasGapRule = steeringSection.includes('Gap') && (
+      steeringSection.includes('no-source') ||
+      steeringSection.includes('来源为用户口述') ||
+      steeringSection.includes('fail-closed')
+    );
+    if (!hasGapRule) {
+      errors.push('SI-46: REPORT_STEERING missing fail-closed/Gap rule for no-source');
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-47: Report fact source and no-fabrication rule existence (WP-009)
+ *
+ * Verifies the "报告事实来源与禁止编造规则" appendix in
+ * communication-and-reporting-rules.md contains:
+ *   (a) Allowed fact sources listed
+ *   (b) Forbidden fabricated content listed (at least 4 items)
+ *   (c) Fail-closed rule when no source found
+ *
+ * PASSES when: all required elements present.
+ * FAILS when: any element missing.
+ */
+function checkSemanticInvariant47(baseDir) {
+  const crrPath = path.join(baseDir, 'ai-pm-os', 'references', 'communication-and-reporting-rules.md');
+  const crrContent = readSafe(crrPath) || '';
+  const errors = [];
+
+  const appendixStart = crrContent.indexOf('## 附录：报告事实来源与禁止编造规则');
+  if (appendixStart < 0) {
+    errors.push('SI-47: "## 附录：报告事实来源与禁止编造规则" not found');
+    return errors;
+  }
+  const appendix = crrContent.substring(appendixStart);
+
+  // (a) Allowed sources
+  const allowedKeywords = ['PM_RAID_LOG', 'PM_MEETING', 'PM_PENDING_UPDATES', 'PM_SPRINT', '04_TODO', 'PM_APPROVAL'];
+  let foundAllowed = 0;
+  for (const kw of allowedKeywords) {
+    if (appendix.includes(kw)) foundAllowed++;
+  }
+  if (foundAllowed < 3) {
+    errors.push('SI-47: insufficient allowed fact sources (found ' + foundAllowed + ', expected >= 3)');
+  }
+
+  // (b) Forbidden fabricated content: must have sufficient bullet points.
+  // Only count "### 禁止编造的内容" section bullets, not table headers.
+  // The "### 禁止编造的内容" section starts after "### 允许的事实来源" table.
+  const allowedStart = appendix.indexOf('### 允许的事实来源');
+  const forbSectionStart = appendix.indexOf('### 禁止编造的内容', allowedStart + 1);
+  const failClosedStart = appendix.indexOf('### Fail-Closed', forbSectionStart + 1);
+  const forbBulletsSection = forbSectionStart >= 0
+    ? appendix.substring(forbSectionStart, failClosedStart > 0 ? failClosedStart : appendix.length)
+    : '';
+  // Count non-header bullet lines (those starting with "- " or "* ")
+  const forbBullets = (forbBulletsSection.match(/^- [^\n]/gm) || []).length;
+  if (forbBullets < 4) {
+    errors.push('SI-47: insufficient forbidden fabrication bullet points (found ' + forbBullets + ', expected >= 4)');
+  }
+
+  // (c) Fail-closed rule
+  if (!appendix.includes('Gap') && !appendix.includes('fail-closed') && !appendix.includes('Fail-Closed')) {
+    errors.push('SI-47: fail-closed rule missing in fact source appendix');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-48: Scenario count updated to 102 and SC-RP-01~12 existence (WP-009)
+ *
+ * Verifies that scenarios.md contains:
+ *   (a) 102 scenario headings (## 1..## 102)
+ *   (b) SC-RP-01 through SC-RP-12 all exist
+ *
+ * PASSES when: count = 102 and all 12 IDs found.
+ * FAILS when: count != 102 or any SC-RP ID missing.
+ */
+function checkSemanticInvariant48(baseDir) {
+  const scenariosPath = path.join(baseDir, 'ai-pm-os', 'scenarios', 'scenarios.md');
+  const scenariosContent = readSafe(scenariosPath) || '';
+  const errors = [];
+
+  // Count ## N. headings
+  const headingNums = [];
+  const lines = scenariosContent.split('\n');
+  for (const line of lines) {
+    const m = line.match(/^## (\d+)\./);
+    if (m) headingNums.push(parseInt(m[1], 10));
+  }
+
+  if (headingNums.length !== 102) {
+    errors.push('SI-48: found ' + headingNums.length + '/102 scenario headings');
+  }
+
+  // Check SC-RP-01 through SC-RP-12
+  for (let i = 1; i <= 12; i++) {
+    const id = 'SC-RP-' + String(i).padStart(2, '0');
+    if (!scenariosContent.includes(id)) {
+      errors.push('SI-48: scenario ID "' + id + '" not found');
     }
   }
 
@@ -3763,7 +4242,15 @@ function main() {
   const si38 = checkSemanticInvariant38(baseDir);
   const si39 = checkSemanticInvariant39(baseDir);
   const si40 = checkSemanticInvariant40(baseDir);
-  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32, ...si33, ...si34, ...si35, ...si36, ...si37, ...si38, ...si39, ...si40);
+  const si41 = checkSemanticInvariant41(baseDir);
+  const si42 = checkSemanticInvariant42(baseDir);
+  const si43 = checkSemanticInvariant43(baseDir);
+  const si44 = checkSemanticInvariant44(baseDir);
+  const si45 = checkSemanticInvariant45(baseDir);
+  const si46 = checkSemanticInvariant46(baseDir);
+  const si47 = checkSemanticInvariant47(baseDir);
+  const si48 = checkSemanticInvariant48(baseDir);
+  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32, ...si33, ...si34, ...si35, ...si36, ...si37, ...si38, ...si39, ...si40, ...si41, ...si42, ...si43, ...si44, ...si45, ...si46, ...si47, ...si48);
   if (siErrors.length === 0) {
     console.log('  OK: SI-01 (framework auto-selection) PASS');
     console.log('  OK: SI-02 (atomic PU apply) PASS');
@@ -3805,6 +4292,14 @@ function main() {
     console.log('  OK: SI-38 (AUDIT P0 Checklist) PASS');
     console.log('  OK: SI-39 (Template Contracts) PASS');
     console.log('  OK: SI-40 (Scenario Count 90 + SC-WF-01~10) PASS');
+    console.log('  OK: SI-41 (crr Required Files) PASS');
+    console.log('  OK: SI-42 (6 P0 Communication Workflows) PASS');
+    console.log('  OK: SI-43 (Meeting Five-piece + No Unconf Decision) PASS');
+    console.log('  OK: SI-44 (Briefing 3~5 Actions + 7-field Suggestion) PASS');
+    console.log('  OK: SI-45 (TODO 10 Fields + Carry-over) PASS');
+    console.log('  OK: SI-46 (Report Format Boundaries: DAILY/PERIODIC/STEERING) PASS');
+    console.log('  OK: SI-47 (Report Fact Source No-Fabrication) PASS');
+    console.log('  OK: SI-48 (Scenario Count 102 + SC-RP-01~12) PASS');
   } else {
     for (const e of siErrors) {
       console.log('  SEMANTIC VIOLATION: ' + e);
