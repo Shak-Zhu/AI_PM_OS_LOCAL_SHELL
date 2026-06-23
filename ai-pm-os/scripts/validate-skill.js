@@ -27,7 +27,8 @@ const path = require('path');
 // WP-005: Extended to 60 (added 10 execution-integrity scenarios SC-EI-01..10).
 // WP-006: Extended to 70 (added 10 conflict/scenarios SC-CHX-01..10).
 // WP-007: Extended to 80 (added 10 command/routing scenarios SC-CMD-01..10).
-const EXPECTED_SCENARIO_COUNT = 80;
+// WP-008: Extended to 90 (added 10 workflow scenarios SC-WF-01..10).
+const EXPECTED_SCENARIO_COUNT = 90;
 
 // Required files inside the ai-pm-os/ package
 const REQUIRED_FILES = [
@@ -44,10 +45,9 @@ const REQUIRED_FILES = [
   'ai-pm-os/references/execution-integrity.md',
   'ai-pm-os/references/conflict-and-chaos-rules.md',
   'ai-pm-os/references/command-and-approval-rules.md',
+  'ai-pm-os/references/project-workflow-rules.md',
   'ai-pm-os/scenarios/scenarios.md',
 ];
-
-// Required capability tags that must appear in SKILL.md
 const REQUIRED_CAPABILITY_TAGS = [
   'governance:judgment',
   'framework:pmp_pmbok',
@@ -3115,6 +3115,467 @@ function checkSemanticInvariant32(baseDir) {
   return errors;
 }
 
+/**
+ * SI-33: 5 P0 Workflow Objects — block-level 8-field parsing (WP-008)
+ *
+ * Parses project-workflow-rules.md and extracts WF-P0-01 through WF-P0-05 blocks.
+ * Each block must contain exactly 8 field rows (excluding header row and separator).
+ * Field names must match the 8 required fields.
+ *
+ * PASSES when: all 5 blocks exist, each with exactly 8 valid field rows.
+ * FAILS when: block count != 5, any block has wrong field count, or unknown field names.
+ */
+function checkSemanticInvariant33(baseDir) {
+  const pwrPath = path.join(baseDir, 'ai-pm-os', 'references', 'project-workflow-rules.md');
+  const pwrContent = readSafe(pwrPath) || '';
+  const errors = [];
+
+  const REQUIRED_WF_IDS = ['INIT', 'INTAKE', 'APPLY', 'TAKEOVER', 'AUDIT'];
+
+  // Split into blocks by ## WF-P0-## headings
+  const blockRe = /## WF-P0-\d+:/gm;
+  const blockPositions = [];
+  let m;
+  while ((m = blockRe.exec(pwrContent)) !== null) {
+    blockPositions.push(m.index);
+  }
+  blockPositions.push(pwrContent.length); // sentinel
+
+  if (blockPositions.length - 1 !== 5) {
+    errors.push('SI-33: found ' + (blockPositions.length - 1) + '/5 workflow blocks');
+    return errors;
+  }
+
+  const VALID_SUBSECTIONS = [
+    'entry_triggers', 'required_reads', 'preflight_gates',
+    'allowed_outputs', 'forbidden_outputs', 'state_transitions', 'failure_escalation',
+  ];
+  const wfIdsFound = [];
+
+  for (let i = 0; i < blockPositions.length - 1; i++) {
+    const blockText = pwrContent.substring(blockPositions[i], blockPositions[i + 1]);
+
+    // Extract workflow_id from heading (e.g., "## WF-P0-01: INIT — 项目初始化")
+    const headingMatch = blockText.match(/## WF-P0-\d+:\s+(\S+)/);
+    const wfId = headingMatch ? headingMatch[1].trim() : '';
+    wfIdsFound.push(wfId);
+
+    // Exactly 7 ### subsections required (workflow_id is the 8th field, in the ## heading)
+    const subsectionMatches = blockText.match(/### \w+/g) || [];
+    const fieldCount = subsectionMatches.length;
+
+    // Exactly 8 fields total:
+    // - workflow_id (in the ## heading)
+    // - 7 standard subsections (entry_triggers, required_reads, preflight_gates,
+    //   allowed_outputs, forbidden_outputs, state_transitions, failure_escalation)
+    // TAKEOVER and AUDIT have an extra "### P0" subsection for their checklist tables,
+    // so they have 8 subsections (7 standard + ### P0), which is the correct count.
+    const validSubCountForWorkflow = {
+      'INIT': 7, 'INTAKE': 7, 'APPLY': 7,
+      'TAKEOVER': 8, 'AUDIT': 8,
+    };
+    const expectedCount = validSubCountForWorkflow[wfId];
+    if (fieldCount !== expectedCount) {
+      errors.push('SI-33: workflow "' + wfId + '" has ' + fieldCount + ' subsections (expected ' + expectedCount + ')');
+    }
+
+    // Check for duplicate subsection names (e.g. two "### entry_triggers")
+    const seenSubsections = new Set();
+    for (const sub of subsectionMatches) {
+      const name = sub.replace(/^###\s+/, '');
+      if (seenSubsections.has(name)) {
+        errors.push('SI-33: workflow "' + wfId + '" has duplicate subsection "### ' + name + '"');
+      }
+      seenSubsections.add(name);
+    }
+
+    // Verify all 7 required subsections are present and non-empty
+    for (const field of VALID_SUBSECTIONS) {
+      if (!blockText.includes('### ' + field)) {
+        errors.push('SI-33: workflow "' + wfId + '" missing subsection "### ' + field + '"');
+      } else {
+        // Verify the subsection is not empty (has content after the heading)
+        const subIdx = blockText.indexOf('### ' + field);
+        const nextSubIdx = blockText.indexOf('\n### ', subIdx + 1);
+        const nextNextIdx = nextSubIdx > 0 ? nextSubIdx : blockText.length;
+        const subContent = blockText.substring(subIdx, nextNextIdx).trim();
+        if (subContent === '### ' + field || subContent === '### ' + field + '\n' || subContent === '### ' + field + '\r') {
+          errors.push('SI-33: workflow "' + wfId + '" subsection "### ' + field + '" is empty');
+        }
+      }
+    }
+  }
+
+  // Check all 5 IDs are present and unique
+  const uniqueIds = [...new Set(wfIdsFound)];
+  for (const id of REQUIRED_WF_IDS) {
+    if (!uniqueIds.includes(id)) {
+      errors.push('SI-33: workflow ID "' + id + '" missing');
+    }
+  }
+
+  // Check for duplicate workflow IDs
+  const seenIds = new Set();
+  for (const id of wfIdsFound) {
+    if (seenIds.has(id)) {
+      errors.push('SI-33: duplicate workflow_id "' + id + '" found');
+    }
+    seenIds.add(id);
+  }
+
+  // Check for unknown workflow IDs (not in REQUIRED_WF_IDS)
+  for (const id of wfIdsFound) {
+    if (!REQUIRED_WF_IDS.includes(id)) {
+      errors.push('SI-33: unknown workflow_id "' + id + '"');
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-34: INIT — forbidden Approved output + Draft/JSON state requirement (WP-008)
+ *
+ * Checks the INIT block in project-workflow-rules.md for:
+ *   (a) forbidden_outputs mentions Approved
+ *   (b) allowed_outputs mentions Draft (or Draft-adjacent)
+ *   (c) allowed_outputs mentions JSON (07_DATA or .json)
+ *
+ * PASSES when: all 3 conditions are met.
+ * FAILS when: any condition is missing.
+ */
+function checkSemanticInvariant34(baseDir) {
+  const pwrPath = path.join(baseDir, 'ai-pm-os', 'references', 'project-workflow-rules.md');
+  const pwrContent = readSafe(pwrPath) || '';
+  const errors = [];
+
+  const initStart = pwrContent.indexOf('## WF-P0-01: INIT');
+  if (initStart < 0) {
+    errors.push('SI-34: INIT block not found');
+    return errors;
+  }
+  const initEnd = pwrContent.indexOf('## WF-P0-02:', initStart + 1);
+  const initSection = pwrContent.substring(initStart, initEnd > 0 ? initEnd : pwrContent.length);
+
+  // Extract specific subsection content (not with a character-limited regex that can bleed into adjacent sections)
+  function getSubsectionContent(section, subsectionName) {
+    const idx = section.indexOf('### ' + subsectionName);
+    if (idx < 0) return '';
+    const endIdx = section.indexOf('\n### ', idx + 1);
+    return section.substring(idx, endIdx > 0 ? endIdx : section.length);
+  }
+
+  const forbiddenSub = getSubsectionContent(initSection, 'forbidden_outputs');
+  const allowedSub = getSubsectionContent(initSection, 'allowed_outputs');
+
+  // (a) forbidden_outputs must mention Approved
+  if (!forbiddenSub.includes('Approved')) {
+    errors.push('SI-34: INIT forbidden_outputs does not mention Approved');
+  }
+
+  // (b) allowed_outputs must mention Draft
+  if (!allowedSub.includes('Draft')) {
+    errors.push('SI-34: INIT allowed_outputs does not mention Draft');
+  }
+
+  // (c) must mention JSON or 07_DATA
+  if (!initSection.includes('07_DATA') && !initSection.includes('.json')) {
+    errors.push('SI-34: INIT section does not mention JSON or 07_DATA');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-35: INTAKE — Input Log + Gap + Pending Updates draft + forbid Approved Baseline (WP-008)
+ *
+ * Checks the INTAKE block for:
+ *   (a) mentions PM_INPUT_LOG.md or Input Log
+ *   (b) mentions Gap or PM_GAP_ANALYSIS.md
+ *   (c) mentions Pending Update or PU (draft)
+ *   (d) forbidden_outputs mentions Approved Baseline
+ *
+ * PASSES when: all 4 conditions are met.
+ * FAILS when: any condition is missing.
+ */
+function checkSemanticInvariant35(baseDir) {
+  const pwrPath = path.join(baseDir, 'ai-pm-os', 'references', 'project-workflow-rules.md');
+  const pwrContent = readSafe(pwrPath) || '';
+  const errors = [];
+
+  const intakeStart = pwrContent.indexOf('## WF-P0-02: INTAKE');
+  if (intakeStart < 0) {
+    errors.push('SI-35: INTAKE block not found');
+    return errors;
+  }
+  const intakeEnd = pwrContent.indexOf('## WF-P0-03:', intakeStart + 1);
+  const intakeSection = pwrContent.substring(intakeStart, intakeEnd > 0 ? intakeEnd : pwrContent.length);
+
+  if (!intakeSection.includes('PM_INPUT_LOG') && !intakeSection.includes('Input Log')) {
+    errors.push('SI-35: INTAKE does not mention PM_INPUT_LOG.md or Input Log');
+  }
+  if (!intakeSection.includes('Gap') && !intakeSection.includes('PM_GAP_ANALYSIS')) {
+    errors.push('SI-35: INTAKE does not mention Gap or PM_GAP_ANALYSIS.md');
+  }
+  if (!intakeSection.includes('Pending Update') && !intakeSection.includes('PU')) {
+    errors.push('SI-35: INTAKE does not mention Pending Update or PU');
+  }
+  if (!intakeSection.match(/(?:禁止|forbidden)[^}]{0,100}(?:Approved Baseline|Baseline)/i)) {
+    errors.push('SI-35: INTAKE forbidden_outputs does not mention Approved Baseline');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-36: APPLY — requires Approved PU + atomic + checkpoint + rejects Proposed/Rejected (WP-008)
+ *
+ * Checks the APPLY block for:
+ *   (a) mentions Approved PU (preflight_gates or allowed_outputs)
+ *   (b) mentions atomic application
+ *   (c) mentions checkpoint
+ *   (d) mentions Proposed and Rejected as forbidden
+ *
+ * PASSES when: all 4 conditions are met.
+ * FAILS when: any condition is missing.
+ */
+function checkSemanticInvariant36(baseDir) {
+  const pwrPath = path.join(baseDir, 'ai-pm-os', 'references', 'project-workflow-rules.md');
+  const pwrContent = readSafe(pwrPath) || '';
+  const errors = [];
+
+  const applyStart = pwrContent.indexOf('## WF-P0-03: APPLY');
+  if (applyStart < 0) {
+    errors.push('SI-36: APPLY block not found');
+    return errors;
+  }
+  const applyEnd = pwrContent.indexOf('## WF-P0-04:', applyStart + 1);
+  const applySection = pwrContent.substring(applyStart, applyEnd > 0 ? applyEnd : pwrContent.length);
+
+  if (!applySection.match(/(?:Approved|PROPOSED)[^}]{0,100}PU/i) &&
+      !applySection.match(/PU[^}]{0,100}(?:Approved|PROPOSED)/i)) {
+    errors.push('SI-36: APPLY does not mention Approved PU requirement');
+  }
+  if (!applySection.match(/(?:原子|atomic)/i)) {
+    errors.push('SI-36: APPLY does not mention atomic application');
+  }
+  if (!applySection.match(/(?:checkpoint|Git)/i)) {
+    errors.push('SI-36: APPLY does not mention checkpoint or Git');
+  }
+  if (!applySection.match(/(?:禁止|forbidden)[^}]{0,50}Proposed/i) ||
+      !applySection.match(/(?:禁止|forbidden)[^}]{0,50}Rejected/i)) {
+    errors.push('SI-36: APPLY does not forbid Proposed and Rejected states');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-37: TAKEOVER — P0 five-item checklist + P1 boundary statement (WP-008)
+ *
+ * Checks the TAKEOVER block for:
+ *   (a) all 5 P0-TK items present (P0-TK-01 through P0-TK-05)
+ *   (b) P1 boundary statement exists
+ *
+ * PASSES when: all 5 P0-TK items and P1 boundary found.
+ * FAILS when: any P0-TK item missing or P1 boundary not stated.
+ */
+function checkSemanticInvariant37(baseDir) {
+  const pwrPath = path.join(baseDir, 'ai-pm-os', 'references', 'project-workflow-rules.md');
+  const pwrContent = readSafe(pwrPath) || '';
+  const errors = [];
+
+  const tkStart = pwrContent.indexOf('## WF-P0-04: TAKEOVER');
+  if (tkStart < 0) {
+    errors.push('SI-37: TAKEOVER block not found');
+    return errors;
+  }
+  const tkEnd = pwrContent.indexOf('## WF-P0-05:', tkStart + 1);
+  const tkSection = pwrContent.substring(tkStart, tkEnd > 0 ? tkEnd : pwrContent.length);
+
+  // Check P0-TK-01 through P0-TK-05
+  for (let i = 1; i <= 5; i++) {
+    if (!tkSection.includes('P0-TK-0' + i)) {
+      errors.push('SI-37: TAKEOVER missing P0-TK-0' + i + ' item');
+    }
+  }
+
+  // Check P1 boundary
+  if (!tkSection.match(/P1/i) || !tkSection.match(/(?:不在|不属于|超出|不属于).*P0/i)) {
+    errors.push('SI-37: TAKEOVER does not state P1 boundary');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-38: AUDIT — P0 six-item checklist + P1 boundary statement (WP-008)
+ *
+ * Checks the AUDIT block for:
+ *   (a) all 6 P0-AD items present (P0-AD-01 through P0-AD-06)
+ *   (b) P1 boundary statement exists
+ *
+ * PASSES when: all 6 P0-AD items and P1 boundary found.
+ * FAILS when: any P0-AD item missing or P1 boundary not stated.
+ */
+function checkSemanticInvariant38(baseDir) {
+  const pwrPath = path.join(baseDir, 'ai-pm-os', 'references', 'project-workflow-rules.md');
+  const pwrContent = readSafe(pwrPath) || '';
+  const errors = [];
+
+  const auditStart = pwrContent.indexOf('## WF-P0-05: AUDIT');
+  if (auditStart < 0) {
+    errors.push('SI-38: AUDIT block not found');
+    return errors;
+  }
+  // AUDIT is the last block, so we use the end of the file
+  const auditSection = pwrContent.substring(auditStart);
+
+  // Check P0-AD-01 through P0-AD-06
+  for (let i = 1; i <= 6; i++) {
+    if (!auditSection.includes('P0-AD-0' + i)) {
+      errors.push('SI-38: AUDIT missing P0-AD-0' + i + ' item');
+    }
+  }
+
+  // Check P1 boundary
+  if (!auditSection.match(/P1/i) || !auditSection.match(/(?:不在|不属于|超出).*P0/i)) {
+    errors.push('SI-38: AUDIT does not state P1 boundary');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-39: Five template contracts exist (WP-008)
+ *
+ * Checks project-workflow-rules.md for all 5 required template contracts:
+ *   PM_TAKEOVER_ASSESSMENT.md, PM_AUDIT_REPORT.md, PM_PENDING_UPDATES.md,
+ *   PM_INPUT_LOG.md, PM_GAP_ANALYSIS.md
+ *
+ * PASSES when: all 5 template names are mentioned.
+ * FAILS when: any template is missing.
+ */
+function checkSemanticInvariant39(baseDir) {
+  const pwrPath = path.join(baseDir, 'ai-pm-os', 'references', 'project-workflow-rules.md');
+  const pwrContent = readSafe(pwrPath) || '';
+  const errors = [];
+
+  // Parse the template contract table: 5 rows (excluding header and separator)
+  // Find the appendix section first
+  const appendixIdx = pwrContent.indexOf('## 附录：模板契约定义');
+  if (appendixIdx < 0) {
+    errors.push('SI-39: appendix "## 附录：模板契约定义" not found');
+    return errors;
+  }
+  const appendix = pwrContent.substring(appendixIdx);
+
+  // Extract the table — find lines starting with | after the appendix header
+  const tableStart = appendix.indexOf('| 模板');
+  if (tableStart < 0) {
+    errors.push('SI-39: template table header not found');
+    return errors;
+  }
+  const tableText = appendix.substring(tableStart);
+
+  // Split into lines and find table rows (lines starting with |, not separator |---|)
+  const lines = tableText.split('\n');
+  const dataRows = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('|') && !trimmed.match(/^\|[-: |]+\|$/) && !trimmed.startsWith('| 模板')) {
+      dataRows.push(trimmed);
+    }
+  }
+
+  // We expect exactly 5 data rows
+  if (dataRows.length !== 5) {
+    errors.push('SI-39: template table has ' + dataRows.length + ' rows (expected 5)');
+    return errors;
+  }
+
+  // Expected templates and their workflows
+  const EXPECTED = [
+    { name: 'PM_TAKEOVER_ASSESSMENT.md', workflows: ['TAKEOVER'] },
+    { name: 'PM_AUDIT_REPORT.md', workflows: ['AUDIT'] },
+    { name: '00_PM_MEMORY/PM_PENDING_UPDATES.md', workflows: ['INTAKE', 'APPLY'] },
+    { name: '00_PM_MEMORY/PM_INPUT_LOG.md', workflows: ['INTAKE'] },
+    { name: '00_PM_MEMORY/PM_GAP_ANALYSIS.md', workflows: ['所有工作流'] },
+  ];
+
+  const foundTemplates = [];
+  for (const row of dataRows) {
+    const cells = row.split('|').map(c => c.trim()).filter(c => c.length > 0);
+    if (cells.length < 3) {
+      errors.push('SI-39: malformed table row: ' + row);
+      continue;
+    }
+    const tplName = cells[0].replace(/`/g, '').trim();
+    foundTemplates.push(tplName);
+
+    // Check the template name is one of the expected ones
+    const matched = EXPECTED.find(e => e.name === tplName);
+    if (!matched) {
+      errors.push('SI-39: unexpected template "' + tplName + '" in table');
+    }
+  }
+
+  // Verify template set is exactly the expected set (set equality)
+  const foundSet = new Set(foundTemplates);
+  const expectedSet = new Set(EXPECTED.map(e => e.name));
+  if (foundSet.size !== expectedSet.size || ![...foundSet].every(t => expectedSet.has(t))) {
+    const diff = [...foundSet].filter(t => !expectedSet.has(t));
+    if (diff.length > 0) errors.push('SI-39: unexpected templates: ' + diff.join(', '));
+  }
+
+  // Check that state field declarations exist somewhere in the appendix
+  // Look for the state field declaration (4th column header or a note about states)
+  const stateKeywords = ['Draft', 'Proposed', 'Approved', 'Rejected', 'Applied', 'Parked'];
+  const stateCount = stateKeywords.filter(kw => tableText.includes(kw)).length;
+  if (stateCount < 4) {
+    errors.push('SI-39: insufficient state field declarations in template table (found ' + stateCount + ', expected >= 4)');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-40: Scenario count 90 + SC-WF-01~SC-WF-10 existence (WP-008)
+ *
+ * Verifies that scenarios.md contains exactly 90 scenarios (## 1..## 90)
+ * and that SC-WF-01 through SC-WF-10 all exist.
+ *
+ * PASSES when: heading count = 90, and SC-WF-01..10 all found.
+ * FAILS when: count != 90 or any SC-WF ID missing.
+ */
+function checkSemanticInvariant40(baseDir) {
+  const errors = [];
+  const scenariosPath = path.join(baseDir, 'ai-pm-os', 'scenarios', 'scenarios.md');
+  const scenariosContent = readSafe(scenariosPath) || '';
+  const lines = scenariosContent.split('\n');
+
+  // Count ## N. headings
+  const headingNums = [];
+  for (const line of lines) {
+    const m = line.match(/^## (\d+)\./);
+    if (m) headingNums.push(parseInt(m[1], 10));
+  }
+
+  if (headingNums.length !== 90) {
+    errors.push('SI-40: found ' + headingNums.length + '/90 scenario headings');
+  }
+
+  // Check SC-WF-01 through SC-WF-10
+  for (let i = 1; i <= 10; i++) {
+    const id = 'SC-WF-' + String(i).padStart(2, '0');
+    if (!scenariosContent.includes(id)) {
+      errors.push('SI-40: scenario ID "' + id + '" not found');
+    }
+  }
+
+  return errors;
+}
+
 function main() {
   const baseDir = path.resolve(__dirname, '../..');
 
@@ -3294,7 +3755,15 @@ function main() {
   const si30 = checkSemanticInvariant30(baseDir);
   const si31 = checkSemanticInvariant31(baseDir);
   const si32 = checkSemanticInvariant32(baseDir);
-  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32);
+  const si33 = checkSemanticInvariant33(baseDir);
+  const si34 = checkSemanticInvariant34(baseDir);
+  const si35 = checkSemanticInvariant35(baseDir);
+  const si36 = checkSemanticInvariant36(baseDir);
+  const si37 = checkSemanticInvariant37(baseDir);
+  const si38 = checkSemanticInvariant38(baseDir);
+  const si39 = checkSemanticInvariant39(baseDir);
+  const si40 = checkSemanticInvariant40(baseDir);
+  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32, ...si33, ...si34, ...si35, ...si36, ...si37, ...si38, ...si39, ...si40);
   if (siErrors.length === 0) {
     console.log('  OK: SI-01 (framework auto-selection) PASS');
     console.log('  OK: SI-02 (atomic PU apply) PASS');
@@ -3321,13 +3790,21 @@ function main() {
     console.log('  OK: SI-23 (Naming Governance) PASS');
     console.log('  OK: SI-24 (Dirty Worktree Prohibited Actions) PASS');
     console.log('  OK: SI-25 (Markdown/JSON Authority Direction) PASS');
-    console.log('  OK: SI-26 (Scenario Count 70→80) PASS');
+    console.log('  OK: SI-26 (Scenario Count 70→90) PASS');
     console.log('  OK: SI-27 (12 P0 Workflow Objects) PASS');
     console.log('  OK: SI-28 (6 Gate Result States) PASS');
     console.log('  OK: SI-29 (Approval State Machine) PASS');
     console.log('  OK: SI-30 (Role/Permission Matrix) PASS');
     console.log('  OK: SI-31 (COC Routing Integration) PASS');
-    console.log('  OK: SI-32 (Scenario Count 80) PASS');
+    console.log('  OK: SI-32 (Scenario Count 80→90) PASS');
+    console.log('  OK: SI-33 (5 P0 Workflow Objects) PASS');
+    console.log('  OK: SI-34 (INIT Forbidden Approved) PASS');
+    console.log('  OK: SI-35 (INTAKE Draft+Gap+PU) PASS');
+    console.log('  OK: SI-36 (APPLY Atomic+Checkpoint) PASS');
+    console.log('  OK: SI-37 (TAKEOVER P0 Checklist) PASS');
+    console.log('  OK: SI-38 (AUDIT P0 Checklist) PASS');
+    console.log('  OK: SI-39 (Template Contracts) PASS');
+    console.log('  OK: SI-40 (Scenario Count 90 + SC-WF-01~10) PASS');
   } else {
     for (const e of siErrors) {
       console.log('  SEMANTIC VIOLATION: ' + e);

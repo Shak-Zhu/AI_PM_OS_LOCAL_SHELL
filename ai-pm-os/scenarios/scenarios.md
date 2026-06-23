@@ -1435,3 +1435,157 @@
 - **Allow**: 单人角色配置通过 preflight；保留未来拆分能力。
 - **Forbid**: 将单人配置写死为永久状态；移除 future_split_supported 字段。
 - **Evidence**: `PM_ROLE_CONFIG.md`、`07_DATA/project_roles.json`.
+
+## 81. INIT：空目录项目初始化
+
+- **ID**: SC-WF-01
+- **Framework**: PMO + Hybrid + project-workflow-rules
+- **Given**: 用户要求在空目录中初始化新项目；目录只含 `.git/` 或完全为空。
+- **When**: Skill 执行 INIT 工作流；preflight 确认目录为空且无冲突。
+- **Then**:
+  1. 生成 Draft 版 `PM_MEMORY_INDEX.md`（00_PM_MEMORY 文件清单）；
+  2. 生成 Draft 版 `01_PM_DOCUMENTS/PM_PROJECT_BRIEF.md`（Project Brief）；
+  3. 生成 Draft 空状态文件：`04_TODO/`、`00_PM_MEMORY/PM_RAID_LOG.md`、`00_PM_MEMORY/PM_PENDING_UPDATES.md`、`00_PM_MEMORY/PM_GAP_ANALYSIS.md`、`00_PM_MEMORY/PM_INPUT_LOG.md`、`00_PM_MEMORY/PM_APPROVAL_STATUS.md`、`00_PM_MEMORY/PM_DOCUMENT_REGISTRY.md`；
+  4. 若 `PM_ROLE_CONFIG.md` 不存在，生成草案；
+  5. 若 `07_DATA/` 目录不存在，生成初始 JSON 文件。
+- **Allow**: Draft 文件生成成功；INIT 退出 `gate_passed`。
+- **Forbid**: 生成 Approved Baseline；跳过 Draft 直接生成正式文件。
+- **Evidence**: 生成的 Draft 文件列表；Skill 输出日志。
+
+## 82. INIT：已有 PM 文件时拒绝初始化
+
+- **ID**: SC-WF-02
+- **Framework**: PMO + project-workflow-rules
+- **Given**: 用户要求在已有 PM 文件的目录中执行 INIT；目录含 `01_PM_DOCUMENTS/PM_PROJECT_BRIEF.md` 或 `00_PM_MEMORY/PM_RAID_LOG.md` 等。
+- **When**: INIT preflight 检测到非空目录且含 PM 文件；工作流判断这不是空白项目。
+- **Then**:
+  1. 输出 `Gap: directory-not-empty`；
+  2. 建议用户执行 TAKEOVER 工作流；
+  3. INIT 不生成任何文件。
+- **Allow**: TAKEOVER 工作流入口建议。
+- **Forbid**: INIT 在已有 PM 文件目录中重新初始化。
+- **Evidence**: Skill 输出日志；目录内容不变。
+
+## 83. INTAKE：可读材料识别需求和 Gap
+
+- **ID**: SC-WF-03
+- **Framework**: PMP/PMBOK + project-workflow-rules
+- **Given**: 用户粘贴可读材料文本，要求"处理这份材料"；`PM_INPUT_LOG.md` 当前为空。
+- **When**: INTAKE 读取材料并执行结构化提取；识别需求（Requirement）、Action、Risk、Issue、Decision 和 Gap。
+- **Then**:
+  1. 追加 `PM_INPUT_LOG.md` 条目（含 source_fingerprint、时间戳、摘要）；
+  2. 若识别到 Action/Risk，在 `PM_RAID_LOG.md` 追加 Draft 条目；
+  3. 若识别到 Gap，在 `PM_GAP_ANALYSIS.md` 追加 Gap 条目；
+  4. 若材料含变更请求，在 `PM_PENDING_UPDATES.md` 追加 PU 草案（Proposed 状态）；
+  5. 报告提取结果摘要。
+- **Allow**: 生成 Draft PU 草案；INTAKE 本身不写 Approved Baseline。
+- **Forbid**: 直接修改已批准 Scope Baseline；跳过 PU 直接写正式文件；对不可读材料生成虚构内容。
+- **Evidence**: `PM_INPUT_LOG.md`、`PM_RAID_LOG.md`、`PM_GAP_ANALYSIS.md`、`PM_PENDING_UPDATES.md`。
+
+## 84. INTAKE：不可读材料记录为 unreadable
+
+- **ID**: SC-WF-04
+- **Framework**: PMP/PMBOK + project-workflow-rules
+- **Given**: 用户粘贴"材料"但内容为空或不可读（纯乱码/二进制标记）；`PM_INPUT_LOG.md` 存在。
+- **When**: INTAKE preflight 确认材料不可读。
+- **Then**:
+  1. 在 `PM_INPUT_LOG.md` 追加条目，标记 `source_fingerprint: unreadable`；
+  2. 不生成任何 Action/Risk/Gap 条目；
+  3. 输出 `L1: material-unreadable` 并请求用户提供可读材料；
+  4. INTAKE 正常退出（不报错误）。
+- **Allow**: 正常退出；记录不可读标记。
+- **Forbid**: 对不可读材料生成虚构 Action/Risk/Gap。
+- **Evidence**: `PM_INPUT_LOG.md` 条目内容。
+
+## 85. APPLY：Approved PU 原子应用成功
+
+- **ID**: SC-WF-05
+- **Framework**: PMO + project-workflow-rules
+- **Given**: `PM_PENDING_UPDATES.md` 中 PU-XXX 状态为 Approved；`PM_APPROVAL_STATUS.md` 显示该 PU 已批准；目标文件存在。
+- **When**: APPLY 执行 preflight；验证 PU 状态为 Approved；Git 工作树无冲突。
+- **Then**:
+  1. 创建 Git checkpoint（带 PU-XXX 标签）；
+  2. 原子应用 PU：全部目标文件写入或全部不写；
+  3. `PM_PENDING_UPDATES.md` PU-XXX 状态变更为 `Applied`；
+  4. 报告应用结果（涉及文件数、状态变更）。
+- **Allow**: checkpoint 存在；原子应用成功；状态同步更新。
+- **Forbid**: 跳过 checkpoint；部分应用；应用 Proposed 或 Rejected PU。
+- **Evidence**: Git checkpoint；`PM_PENDING_UPDATES.md` 状态变更记录。
+
+## 86. APPLY：Proposed PU 未批准时拒绝应用
+
+- **ID**: SC-WF-06
+- **Framework**: PMO + project-workflow-rules
+- **Given**: `PM_PENDING_UPDATES.md` 中 PU-XXX 状态为 Proposed（尚未批准）；用户要求"立即应用这个变更"。
+- **When**: APPLY preflight 检测 PU 状态为 Proposed；`PM_APPROVAL_STATUS.md` 无对应批准记录。
+- **Then**:
+  1. 输出 `Escalation: pu-not-approved`；
+  2. 说明 PU 状态为 Proposed，需要 Human Owner 或 Sponsor Approver 审批；
+  3. 拒绝写入目标文件；
+  4. APPLY 退出 `gate_failed`。
+- **Allow**: 审批路径说明；L3 升级建议。
+- **Forbid**: 跳过审批直接应用 Proposed PU。
+- **Evidence**: `PM_PENDING_UPDATES.md`；`PM_APPROVAL_STATUS.md`；Skill 输出日志。
+
+## 87. TAKEOVER P0：识别已有文件、缺失文件、风险和待补信息
+
+- **ID**: SC-WF-07
+- **Framework**: PMO + APM + project-workflow-rules
+- **Given**: 用户说"接管这个项目"；目录含 `00_PM_MEMORY/PM_RAID_LOG.md`、`01_PM_DOCUMENTS/PM_SCOPE_BASELINE.md`、`04_TODO/` 等文件。
+- **When**: TAKEOVER 读取 PM_MEMORY_INDEX.md 和目录文件；执行 P0 五项验收检查。
+- **Then**:
+  1. 列出已有文件及其状态（Draft / Approved / Parked）；
+  2. 对比目录，识别明显缺失的 PM 文件（如无 RAID Log 或无 Scope）；
+  3. 识别 `PM_RAID_LOG.md` 中状态为 Open 且 due_date 早于今天的 Action；
+  4. 识别无 Owner 的 Scope 变更需求；
+  5. 识别缺少 owner/due_date/next_step 的 Action 条目；
+  6. 生成 `PM_TAKEOVER_ASSESSMENT.md`（Draft）。
+- **Allow**: Draft 接管评估报告生成；Gap 条目追加。
+- **Forbid**: P0 接管评估阶段写入 Approved Baseline；做完整深度分析（P1）。
+- **Evidence**: `PM_TAKEOVER_ASSESSMENT.md`；`PM_GAP_ANALYSIS.md` Gap 条目。
+
+## 88. TAKEOVER P0：目录为空时识别并建议 INIT
+
+- **ID**: SC-WF-08
+- **Framework**: PMO + project-workflow-rules
+- **Given**: 用户说"接管这个项目"；目标目录完全为空（无任何 PM 文件）。
+- **When**: TAKEOVER preflight 确认目录无 PM 文件。
+- **Then**:
+  1. 输出 `Gap: directory-empty-no-pm-files`；
+  2. 建议用户执行 INIT 工作流初始化项目；
+  3. TAKEOVER 不生成任何评估文件。
+- **Allow**: INIT 工作流入口建议。
+- **Forbid**: 对空目录生成 TAKEOVER 评估。
+- **Evidence**: Skill 输出日志。
+
+## 89. AUDIT P0：Scope 批准状态、未审批变更、逾期 Action、Markdown/JSON 不同步检查
+
+- **ID**: SC-WF-09
+- **Framework**: PMO + APM + project-workflow-rules
+- **Given**: 用户说"审计这个项目"；项目含 `01_PM_DOCUMENTS/PM_SCOPE_BASELINE.md`、`00_PM_MEMORY/PM_PENDING_UPDATES.md`、`00_PM_MEMORY/PM_RAID_LOG.md`、`00_PM_MEMORY/PM_DOCUMENT_REGISTRY.md` 和 `07_DATA/` JSON 文件。
+- **When**: AUDIT 读取所有相关文件并执行 P0 六项检查。
+- **Then**:
+  1. 检查 Scope 状态（Approved / Draft / 不存在）；
+  2. 检查 PU 中 Proposed 超过 7 天未审批的情况；
+  3. 检查 `PM_RAID_LOG.md` 中 overdue Action（due_date < today 且 status = Open）；
+  4. 检查 Action 条目是否缺少 owner/due_date/next_step；
+  5. 检查 document_registry 中 Approved 文件对应的 JSON 条目是否存在且状态一致；
+  6. 生成 `PM_AUDIT_REPORT.md`（Draft 审计报告）。
+- **Allow**: Draft 审计报告生成；Gap 条目追加。
+- **Forbid**: P0 审计阶段直接修复缺口；生成整改建议（P1）。
+- **Evidence**: `PM_AUDIT_REPORT.md`；`PM_GAP_ANALYSIS.md` Gap 条目。
+
+## 90. AUDIT P0：命名规范检查与 P0/P1 边界声明
+
+- **ID**: SC-WF-10
+- **Framework**: PMO + governance + project-workflow-rules
+- **Given**: 用户执行 AUDIT；`PM_RAID_LOG.md`、`PM_GAP_ANALYSIS.md`、`PM_PENDING_UPDATES.md` 存在。
+- **When**: AUDIT 执行命名规范检查（P0-AD-06）。
+- **Then**:
+  1. 检查所有 ID 格式是否符合规范：N-##（命名）、C-##（冲突）、GAP-##（Gap）、PU-##（Pending Update）；
+  2. 识别不符合规范的 ID 并记录为 Gap；
+  3. 在 `PM_AUDIT_REPORT.md` 中明确声明：深度跨文件一致性分析（P1）不在 P0 范围内；
+  4. 生成 Draft 审计报告。
+- **Allow**: 识别命名违规；声明 P1 边界；Draft 报告生成。
+- **Forbid**: 将 P1 深度审计写成 P0 已实现；直接修复命名违规而不记录。
+- **Evidence**: `PM_AUDIT_REPORT.md` P0/P1 边界声明；命名违规 Gap 条目。

@@ -61,6 +61,8 @@ Layer 3: Gate Evaluation
 
 每个工作流对象必须包含以下字段：
 
+> **具体实现**：INIT、INTAKE、APPLY、TAKEOVER、AUDIT 五个 P0 工作流的完整行为契约（包括 8 字段详细定义、P0/P1 边界、failure_escalation 规则）见 `references/project-workflow-rules.md`。
+
 | 字段 | 说明 | 约束 |
 |---|---|---|
 | `workflow_id` | 唯一标识符，全部大写 | 不得重复 |

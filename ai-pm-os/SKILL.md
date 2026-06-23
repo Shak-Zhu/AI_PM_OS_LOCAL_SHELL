@@ -222,6 +222,7 @@ target_agents: [Cursor, Codex]
 - **9 个审批状态**：Draft、Proposed、Pending Review、Approved、Rejected、Superseded、Applied、Human Accepted、Parked。
 - **9 类角色**：PM Owner、Human Owner、PM Reviewer、Sponsor Approver、Product Owner、Tech Owner、Business Owner、Agile Owner、UAT Owner。
 - **12 个 P0 工作流**：INIT、INTAKE、MEETING、BRIEFING、TODO、APPLY、REPORT_DAILY、REPORT_WEEKLY、DASHBOARD_SYNC、TAKEOVER、AUDIT、AGILE。
+- **INIT/INTAKE/APPLY/TAKEOVER/AUDIT 详细行为规则**：含 P0/P1 边界、失败升级、禁止动作，见 `references/project-workflow-rules.md`。
 - **个人默认角色**：单人用户默认承担 PM Owner、Human Owner、PM Reviewer、Sponsor Approver；规则支持未来拆分。
 - **Fail-Closed**：跳过审批/前置门/直接写 Approved Baseline/直接进入 Sprint 均阻断。
 
