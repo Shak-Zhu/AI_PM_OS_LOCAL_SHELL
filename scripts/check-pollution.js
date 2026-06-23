@@ -92,7 +92,10 @@ const POLLUTION_PATTERNS = [
 ];
 
 // Directories to skip entirely (no scanning inside these).
-// Order: .git, node_modules, scripts, _DEV_PROJECT_CONTROL
+// NOTE: ai-pm-os/ is NOT skipped — it is scanned like any other product directory.
+// Pollution patterns (PU-001..PU-005, CHG-001..CHG-003, etc.) must be handled
+// by using placeholders (PU-###, CHG-###, etc.) in scenario text, NOT by skipping
+// the entire directory.
 const SKIP_DIRS = [
   '.git',
   'node_modules',

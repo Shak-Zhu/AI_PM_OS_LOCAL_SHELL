@@ -152,15 +152,23 @@ target_agents: [Cursor, Codex]
 
 ## 6. 稳定性规则摘要
 
-完整规则见 `references/stability-rules.md`，本节仅列骨架：
+完整规则见 `references/stability-rules.md` 和 `references/execution-integrity.md`，本节仅列骨架：
 
 - **幂等性**：同输入同状态下重复执行不创建重复 ID、Action、Decision。
+  详见 `references/execution-integrity.md` §0（执行身份模型）和 §2（四类重入判定）。
 - **可恢复性**：中断后能从项目文件恢复阶段、基线、活动项、阻塞和下一步。
+  详见 `references/memory-and-recovery.md` §5 和 `references/execution-integrity.md` §4（部分失败恢复）。
 - **可追溯性**：每项正式更新可追溯到输入、PU、批准人和 Git 证据。
 - **确定性边界**：无法读取 / 无法确认 / 信息冲突时停止升级事实，
   转为 Gap / Pending / Issue。
 - **跨 Agent 一致性**：Cursor 与 Codex 在相同壳和输入下遵守同一状态机、
   同一目录和同一审批规则。
+- **幂等 PU 应用**：批准 PU 采用 at-most-once 语义；禁止静默部分应用。
+  详见 `references/execution-integrity.md` §3。
+- **执行状态机**：七状态（received → preflight_passed → writes_started → writes_completed → sync_completed → reported）。
+  详见 `references/execution-integrity.md` §1。
+- **Markdown 权威恢复方向**：Markdown 成功而 JSON 失败时只能 Markdown → JSON。
+  详见 `references/execution-integrity.md` §5。
 
 ## 6b. Critical Output Contract（REQ-035 / WP-017）
 
@@ -211,10 +219,11 @@ target_agents: [Cursor, Codex]
 - 4 个冲突与混乱（Markdown / JSON 冲突、重复材料、过期 Action、脏工作树）
 - 4 个重复与恢复（同一初始化 3 次、重复 transcript、Missing 材料、中断恢复）
 - 4 个跨 Agent 与输出一致性
-- 8 个 Memory / Recovery 场景
-- 8 个 Critical Output Contract 场景（SC-COC-01~08）：双输出失败关闭、QC-F 引用缺失、阻断发现证据缺失、风险评估缺失、变更前后 diff 缺失、失败升级路径缺失、非授权短指针、错误成功状态
+- 4 个 Memory / Recovery 场景
+- 8 个 Critical Output Contract 场景（SC-COC-01~08）
+- 10 个执行完整性场景（SC-EI-01~10，幂等、重放、检查点、部分失败恢复）
 
-合计 50 个场景。
+合计 60 个场景。
 
 ## 8. 安装与调用
 

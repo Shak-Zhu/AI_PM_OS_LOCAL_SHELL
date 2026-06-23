@@ -1,4 +1,4 @@
-# Behavioral Scenarios — 行为场景（≥20）
+# Behavioral Scenarios — 行为场景（≥60）
 
 每个场景有：唯一 ID、Given、When、Then、Allow、Forbid、Evidence。
 本文件覆盖：
@@ -9,8 +9,11 @@
 - 4 个重复 / 恢复场景
 - 4 个跨 Agent / 输出一致性场景
 - 2 个边界 / 拒绝场景
+- 8 个 Memory / Recovery 场景
+- 8 个 Critical Output Contract 场景
+- 10 个执行完整性场景（幂等、重放、检查点、部分失败恢复）
 
-合计 22 个场景。
+合计 60 个场景。
 
 ---
 
@@ -449,7 +452,7 @@
   1. Skill 检测到 BL-021 与 Approved Scope 冲突；
   2. Skill 输出 Conflict: sprint-scope；
   3. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-SCP-004；
-  4. Skill 在 PM_PENDING_UPDATES.md 写入 PU-CHG-005，请求变更批准将 REQ-042 纳入 Scope；
+  4. Skill 在 PM_PENDING_UPDATES.md 写入 PU-CHG-###，请求变更批准将 REQ-042 纳入 Scope；
   5. Skill 在 PM_RAID_LOG.md 写入 R-2026-### 标 scope-creep；
   6. Skill 不得将 BL-021 保持在 committed 状态；必须将其转为 blocked 或待审批状态；
   7. Skill 不得从 Sprint Backlog 删除 BL-021；不得修改 Approved Scope；
@@ -563,7 +566,7 @@
   1. Skill 检测到 BL-030 与 Approved Scope 冲突；
   2. Skill 输出 Conflict: sprint-scope；
   3. Skill 在 PM_GAP_ANALYSIS.md 写入 GAP-SCP-009；
-  4. Skill 在 PM_PENDING_UPDATES.md 写入 PU-CHG-009，请求 Scope 变更批准；
+  4. Skill 在 PM_PENDING_UPDATES.md 写入 PU-CHG-###，请求 Scope 变更批准；
   5. Skill 标注 Phase 3 Gate 准入条件：Sprint Backlog 中所有条目必须已在 Approved Scope；
   6. Skill 在 PM_RAID_LOG.md 写入 R-2026-### 标 scope-creep-hybrid；
   7. Skill 不得删除 BL-030；不得修改 Approved Scope。
@@ -889,3 +892,207 @@
 - **Forbid**: 不得在 Gate FAIL 时输出 `issued` / `accepted` / `complete` / `done` / `finished`；
   不得用"已发送"等含糊表达替代；不得"乐观声明"以避免尴尬。
 - **Evidence**: 00_PM_MEMORY/PM_GAP_ANALYSIS.md、Gate FAIL 原因、修复后的 Gate PASS 证据。
+
+## 51. 精确重放：六字段匹配返回既有结果
+
+- **ID**: SC-EI-01
+- **Framework**: execution-integrity
+- **Given**: 执行身份六字段（`execution_id`/`intent_type`/`source_fingerprint`/`target_set`/`approval_binding`/`last_durable_checkpoint`）与上一已 `reported` 执行完全相同；
+  上一执行的 `source_fingerprint` = SHA-256(`WP-005 scope_in content`)。
+- **When**: 同一六字段组合再次到达 Skill。
+- **Then**:
+  1. Skill 识别为精确重放（六字段完全匹配）；
+  2. 不得分配新的 `execution_id`；
+  3. 返回既有结果的引用（含原 `execution_id`、目标文件路径、报告时间）；
+  4. 更新 `last_seen_at`，不创建新副本；
+  5. 不得重复创建：PU、Action、Decision、报告、审批记录、JSON 条目。
+- **Allow**: 返回既有结果引用；更新 `last_seen_at`。
+- **Forbid**: 不得分配新 `execution_id`；不得创建重复副作用；
+  不得通过重复写入后去重伪装幂等（重复判定必须在副作用发生前完成）；
+  不得仅凭自然语言相似度判定重复。
+- **Evidence**: `execution_id` 匹配记录、既有结果引用、`last_seen_at` 更新记录。
+
+## 52. 重复材料：source_fingerprint 相同但非同一次到达
+
+- **ID**: SC-EI-02
+- **Framework**: execution-integrity
+- **Given**: 同一份材料内容（`source_fingerprint` 相同）被两次传入 Skill；
+  但两次的 `execution_id` 不同、`intent_type` 不同（如第一次是"处理材料"，第二次是"更新 backlog"）。
+- **When**: 相同 `source_fingerprint` 的第二次到达。
+- **Then**:
+  1. Skill 检测到重复材料（同一内容指纹不同执行上下文）；
+  2. 标记新到达为 `superseded`；
+  3. 旧材料保持原 `execution_id` 记录；
+  4. 新材料使用新 `execution_id`，更新 `intent_type`；
+  5. 不创建新的 Action/Decision（内容相同，结论相同）。
+- **Allow**: 使用新 `execution_id`；标记为 `superseded`。
+- **Forbid**: 不得为相同内容生成两个不同的 Action/Decision；
+  不得在两次到达间合并事实（意图不同则结论可能不同）。
+- **Evidence**: 两份 `execution_id` + `source_fingerprint` 对照、旧材料 `superseded` 标记。
+
+## 53. 批准 PU 重放：approval_binding 相同，内容未变
+
+- **ID**: SC-EI-03
+- **Framework**: execution-integrity
+- **Given**: PU-### 已批准（`Approved`），`approval_binding` = `abc123`，
+  `content_fingerprint` = `def456`（SHA-256 of PU content at approval time）。
+- **When**: 同一 PU（`approval_binding`=`abc123`，`content_fingerprint`=`def456`）再次到达 Skill。
+- **Then**:
+  1. Skill 检测到 `approval_binding` 相同且 `content_fingerprint` 未变；
+  2. 拒绝重新应用 PU；
+  3. 返回既有应用结果引用（含原 `execution_id`、应用时间、结果）；
+  4. 不得生成新的 Action/Decision/JSON 条目。
+- **Allow**: 返回既有结果引用；更新 `last_seen_at`。
+- **Forbid**: 不得对同一批准 PU 应用两次（at-most-once 语义）；
+  不得生成重复的 Action/Decision；
+  不得静默忽略重放的 PU。
+- **Evidence**: `approval_binding` 匹配记录、`content_fingerprint` 验证记录、既有结果引用。
+
+## 54. 内容变化后旧批准：新 fingerprint 必须新 PU
+
+- **ID**: SC-EI-04
+- **Framework**: execution-integrity
+- **Given**: PU-### 已批准（`content_fingerprint`=`def456`）；
+  Human Owner 修改了 PU 内容（SHA-256 → `ghi789`），但 PU 编号仍为 PU-###。
+- **When**: Skill 收到修改内容后的 PU-###（`approval_binding`=`abc123`，`content_fingerprint`=`ghi789`）。
+- **Then**:
+  1. Skill 检测到 `content_fingerprint` 变化；
+  2. 原 PU-###（`def456`）保持 `Approved` 状态，不变；
+  3. 生成新 PU 编号 PU-###-NEW（全新编号，不继承 PU-###）；
+  4. PU-###-NEW 状态为 `Proposed`，需要 Human Owner 重新审批；
+  5. Skill 不得使用旧批准（`def456`）应用新内容（`ghi789`）。
+- **Allow**: 生成新 PU-###-NEW；请求重新审批。
+- **Forbid**: 不得用旧批准（`def456`）应用新内容；
+  不得将 PU-### 的 `Approved` 状态继承到 PU-###-NEW；
+  不得跳过新 PU 的审批流程。
+- **Evidence**: `content_fingerprint` 变化记录、PU-### 状态保持 `Approved` 记录、PU-###-NEW 新编号分配记录。
+
+## 55. 写入前失败：preflight 失败
+
+- **ID**: SC-EI-05
+- **Framework**: execution-integrity
+- **Given**: Skill 准备对目标集合（`target_set` = [`WP-TEST.md`, `backlog.json`]）应用 PU；
+  preflight 检查发现 `backlog.json` 与脏工作树冲突。
+- **When**: preflight 返回任一目标冲突。
+- **Then**:
+  1. Skill 不进入 `writes_started`；
+  2. 整个 PU 不应用（原子性：全部或不应用）；
+  3. 状态保持在 `preflight_passed`；
+  4. 输出 `Conflict: pu-atomic-conflict`；
+  5. 写入 `PM_GAP_ANALYSIS.md`：`GAP-PU-###-pipeline-conflict`；
+  6. 若可拆分，生成新 PU（如 PU-SPLIT-###）仅含无冲突目标；
+  7. 新 PU 编号全新生成（不继承 PU-###）。
+- **Allow**: 生成拆分 PU；请求新审批。
+- **Forbid**: 不得对无冲突目标继续应用（禁止静默部分应用）；
+  不得在 preflight 失败后继续写入；
+  不得跳过冲突报告。
+- **Evidence**: preflight 失败记录、目标冲突列表、`PM_GAP_ANALYSIS.md` Gap 写入记录、拆分 PU 生成记录。
+
+## 56. 单文件写入后失败：部分成功进入 recovery_required
+
+- **ID**: SC-EI-06
+- **Framework**: execution-integrity
+- **Given**: Skill 执行 PU-### 应用，`target_set` = [`WP-TEST.md`, `backlog.json`]；
+  `WP-TEST.md` 写入成功（SHA-256 = `xxx`），`backlog.json` 写入时磁盘空间不足失败。
+- **When**: 写入中部分失败（`writes_started` → 部分成功 → 部分失败）。
+- **Then**:
+  1. Skill 立即进入 `recovery_required` 状态；
+  2. 记录五类证据：
+     - `wrote_targets`：[`WP-TEST.md` + SHA-256]
+     - `unwrote_targets`：[`backlog.json` + 失败原因：磁盘空间不足]
+     - `last_durable_checkpoint`：[`WP-TEST.md` 的 SHA-256]
+     - `next_safe_step`：[继续写入 `backlog.json` / 回滚 / 用户确认]
+     - `forbidden_actions`：[禁止继续写入 `backlog.json`；禁止报告 `complete`]
+  3. 不得报告 `complete` / `done` / `accepted`；
+  4. 不得继续写入 `backlog.json`（可能覆盖部分成功的状态）；
+  5. 不得自动回滚（需用户确认）。
+- **Allow**: 进入 `recovery_required`；记录五类证据；请求用户确认回滚或继续。
+- **Forbid**: 不得报告整体成功；不得继续写入；不得自动回滚；
+  不得用未完成的写入作为最终报告。
+- **Evidence**: 五类证据记录（固化在 Active Context）、`PM_GAP_ANALYSIS.md` Gap 记录。
+
+## 57. Markdown 成功 JSON 失败：只能 Markdown → JSON 修复
+
+- **ID**: SC-EI-07
+- **Framework**: execution-integrity
+- **Given**: WP-TEST.md 写入成功，Markdown 包含 `版本：v1.0`；
+  Skill 尝试同步 `project_state.json` 时，JSON 字段 `version` 仍为旧值 `v0.9`（同步失败）。
+- **When**: `writes_completed` → `sync_completed` 转换失败（Markdown 与 JSON 不一致）。
+- **Then**:
+  1. Skill 识别冲突字段：`project_state.json` 的 `version` 字段（当前 `v0.9`）vs `WP-TEST.md` 的 `版本：v1.0`；
+  2. 以 Markdown 为权威源（`v1.0`）；
+  3. 执行修复：`project_state.json` 的 `version` → `v1.0`；
+  4. 记录同步操作：`Sync: Markdown → JSON | field: version | from: v0.9 → v1.0 | at: <ISO 8601>`；
+  5. 验证修复后一致性；
+  6. 继续 → `sync_completed` → `reported`。
+- **Allow**: Markdown → JSON 修复；记录同步操作；验证一致性。
+- **Forbid**: 不得用 JSON 反向覆盖 Markdown 权威源；
+  不得以"JSON 更新更及时"为由将 JSON 视为权威；
+  不得用 JSON 覆盖 Approved Baseline 中的任何值；
+  不得跳过同步不一致报告。
+- **Evidence**: 冲突字段对比记录、Markdown → JSON 修复记录、同步操作日志、一致性验证记录。
+
+## 58. 恢复再次中断：从新检查点继续或回滚
+
+- **ID**: SC-EI-08
+- **Framework**: execution-integrity
+- **Given**: Skill 执行 PU-### 时，部分失败进入 `recovery_required`（`WP-TEST.md` 已写，`backlog.json` 未写）；
+  用户选择继续，Skill 尝试写入 `backlog.json` 时再次中断（用户强制关闭编辑器）。
+- **When**: 在 `recovery_required` 状态下再次中断。
+- **Then**:
+  1. Skill 读取 Active Context，恢复当前 `pending_writes` 状态；
+  2. 检查 `last_durable_checkpoint`（`WP-TEST.md` SHA-256 = `xxx`）；
+  3. 识别 `backlog.json` 仍为 `unwrote_targets`；
+  4. 再次进入 `recovery_required`，更新五类证据；
+  5. 不得重新写入 `WP-TEST.md`（已确认成功）；
+  6. Skill 输出：`恢复中断：pending_writes = [backlog.json], checkpoint = WP-TEST.md (SHA-256: xxx)`；
+  7. 等待用户确认继续或回滚。
+- **Allow**: 从新检查点继续（`backlog.json`）；等待用户确认。
+- **Forbid**: 不得重新写入 `WP-TEST.md`（已确认成功）；
+  不得在未确认情况下自动继续写入；
+  不得报告整体成功。
+- **Evidence**: Active Context 中更新后的五类证据、`last_durable_checkpoint` 保持 `WP-TEST.md` SHA-256。
+
+## 59. 冲突重复：六字段不匹配但意图冲突
+
+- **ID**: SC-EI-09
+- **Framework**: execution-integrity
+- **Given**: 用户 A 发送"处理材料 M1"（`intent_type`=`INTAKE`，`source_fingerprint`=SHA-256(M1)）；
+  用户 B 同时发送"处理材料 M2"（`intent_type`=`INTAKE`，但 `source_fingerprint` 不同）；
+  Skill 检测到两份材料对同一 Decision（"本项目应该使用 Scrum"）给出了相反的事实。
+- **When**: Skill 识别到两份材料事实冲突（意图类型相同但 `target_set` 冲突）。
+- **Then**:
+  1. Skill 停止执行（不得自动合并）；
+  2. 输出 `Conflict: fact-conflict`（4 类：事实/范围/决策/进度冲突）；
+  3. 写入 `PM_GAP_ANALYSIS.md`：`GAP-CONFLICT-EI-01`；
+  4. 列出冲突字段的具体值对比；
+  5. 请求 L1 澄清（Human Owner 决定哪个事实优先）。
+- **Allow**: 记录冲突；写入 Gap；请求 L1 澄清。
+- **Forbid**: 不得将相似输入自动合并为同一事实；
+  不得静默选择其中一个继续执行；
+  不得依赖自然语言相似度绕过冲突检测；
+  不得在冲突未解决时输出 `issued` / `accepted`。
+- **Evidence**: 两份执行标识对比、冲突字段列表、`PM_GAP_ANALYSIS.md` Gap 写入记录。
+
+## 60. 成功后重复到达：返回既有结果引用
+
+- **ID**: SC-EI-10
+- **Framework**: execution-integrity
+- **Given**: Skill 成功完成 PU-### 应用并报告 `reported`（`execution_id`=`EI-TEST`）；
+  `last_seen_at` = `2026-06-22T18:00:00Z`；
+  30 分钟后，同一六字段组合再次到达。
+- **When**: 成功执行（六字段匹配）后，同一操作再次到达。
+- **Then**:
+  1. Skill 识别为重复到达（六字段匹配 + 上一状态为 `reported`）；
+  2. 不得创建新的 Action/Decision/JSON 条目；
+  3. 返回既有结果引用：
+     - `execution_id`: EI-TEST
+     - `reported_at`: 2026-06-22T18:00:00Z
+     - `target_set`: [WP-TEST.md, backlog.json]
+     - `result`: applied successfully
+  4. 更新 `last_seen_at`（不创建新记录）。
+- **Allow**: 返回既有结果引用；更新 `last_seen_at`。
+- **Forbid**: 不得为同一操作创建第二个 `execution_id`；
+  不得生成第二个 Action/Decision/JSON 条目；
+  不得将重复到达当作新工作处理。
+- **Evidence**: 六字段匹配验证、既有 `execution_id` 引用、`last_seen_at` 更新记录。
