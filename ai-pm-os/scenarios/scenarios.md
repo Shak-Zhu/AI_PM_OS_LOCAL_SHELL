@@ -1770,3 +1770,153 @@
 - **Allow**: 空白模板；Gap 标注；报告窗口标注。
 - **Forbid**: 编造已完成工作；用"暂无数据"代替实际内容而不标注 Gap；跳过 fail-closed 直接输出虚假数据。
 - **Evidence**: Gap 标注内容；空白模板。
+
+## 103. AGILE P0：Product Backlog 条目创建与 Draft → Proposed 流转
+
+- **ID**: SC-AGDM-01
+- **Framework**: agile-data-model-rules
+- **Given**: Product Owner 收到一条新用户需求（无对应 REQ）。
+- **When**: AGILE 工作流中，Product Owner 提交新 Backlog 条目。
+- **Then**:
+  1. 生成 `BL-YYYY-###` 格式的 backlog_id；
+  2. 状态为 `Draft`，字段完整（backlog_id、title、description、priority、status、owner、source、created_at）；
+  3. 若有 REQ 关联，填入 requirement_id；若无，source 字段注明来源；
+  4. 输出 `Draft` Backlog 条目待 PO 审批。
+- **Allow**: Draft 状态；待关联 REQ；source 字段可填"用户"或"团队"。
+- **Forbid**: Draft 条目直接进入 committed Sprint；无 backlog_id；title 为空；priority 为空。
+- **Evidence**: Backlog 条目内容；BL-YYYY-### ID。
+
+## 104. AGILE P0：User Story 缺 Acceptance Criteria → 触发 Gap
+
+- **ID**: SC-AGDM-02
+- **Framework**: agile-data-model-rules
+- **Given**: PO 提交一条 User Story（US-YY-###），但 Story 中无 acceptance_criteria 字段。
+- **When**: AGILE 工作流中，Story 状态从 `Draft` → `Ready` 的 preflight 检查。
+- **Then**:
+  1. 输出 `Gap: story-missing-ac` 并列出建议补充的 AC 条目；
+  2. 阻止 Story 进入 `Ready` 状态；
+  3. 建议 PO 补充 AC（每条必须客观可验证）。
+- **Allow**: Gap 标注；Story 保留在 `Draft`；AC 补充建议。
+- **Forbid**: 无 AC 的 Story 进入 `Ready`；无 AC 的 Story 进入 `Committed`；用自然语言描述替代客观 AC。
+- **Evidence**: Gap 输出内容；Story 状态仍为 `Draft`。
+
+## 105. AGILE P0：User Story 缺 Story Point → 触发 Gap
+
+- **ID**: SC-AGDM-03
+- **Framework**: agile-data-model-rules
+- **Given**: PO 提交一条 User Story（US-YY-###），Story 有完整三段式（as_a/i_want/so_that），但无 story_point 字段。
+- **When**: AGILE 工作流中，Story 进入 Sprint Planning 前的 preflight 检查。
+- **Then**:
+  1. 输出 `Gap: story-missing-sp` 并建议估算方法；
+  2. 阻止 Story 进入 committed Sprint；
+  3. 建议 Planning Poker、T-Shirt Sizing 或 Large Uncertain Card 估算方法。
+- **Allow**: Gap 标注；Story 保留在 `Ready`；SP 估算建议。
+- **Forbid**: 无 SP 的 Story 进入 `Committed`；SP 值不在 Fibonacci 序列（1/2/3/5/8/13/21）。
+- **Evidence**: Gap 输出内容；Story story_point 字段为空。
+
+## 106. AGILE P0：Sprint Backlog committed 前 DoR 检查
+
+- **ID**: SC-AGDM-04
+- **Framework**: agile-data-model-rules
+- **Given**: Sprint Planning 阶段，PO 准备将 Story US-YY-### 纳入 Sprint Backlog committed。
+- **When**: Story 状态 `Ready` → `Committed` 的 preflight 检查。
+- **Then**:
+  1. 检查 Story 的 `dor_status` 字段；
+  2. 检查 ADM-06 DoR checklist（至少 4 条）：需求澄清、AC 已写、SP 已估、Owner 已分配；
+  3. 检查 PO 签字确认；
+  4. 若 DoR 未通过，输出 `Escalation: dor-not-passed` 并列出缺失项；
+  5. Story 不得进入 committed Sprint。
+- **Allow**: Gap 标注；缺失项列表；DoR 补全后重新检查。
+- **Forbid**: DoR 未通过的 Story 进入 committed Sprint；将 DoR 检查结果写入 DoD 字段。
+- **Evidence**: DoR checklist 完成状态；PO 签字记录；Escalation 内容。
+
+## 107. AGILE P0：未批准 Scope 条目禁止进入 committed Sprint
+
+- **ID**: SC-AGDM-05
+- **Framework**: agile-data-model-rules
+- **Given**: Sprint Planning 阶段，Story US-YY-### 的 Backlog 条目 status 为 `Draft` 或 `Proposed`，无 PO 审批。
+- **When**: Story 尝试从 `Ready` → `Committed` 进入 Sprint Backlog。
+- **Then**:
+  1. 检测 Backlog 条目 status；
+  2. 若 status 为 `Draft` 或 `Proposed`，输出 `Escalation: story-not-approved-for-sprint`；
+  3. Story 不得进入 committed Sprint；
+  4. 若存在 Scope 冲突，输出 `Conflict: backlog-scope`，进入 `PM_GAP_ANALYSIS.md`。
+- **Allow**: Gap 标注；Conflict 记录；PU 请求（Draft/Proposed → Ready → Committed 需 PO 审批）。
+- **Forbid**: 未批准 Story 直接进入 committed；自动修改 Approved Scope；静默忽略冲突。
+- **Evidence**: Backlog 条目状态；Conflict/Gap 内容；PU 建议。
+
+## 108. AGILE P0：Sprint Plan 容量与 committed items 验证
+
+- **ID**: SC-AGDM-06
+- **Framework**: agile-data-model-rules
+- **Given**: Sprint Planning 完成，生成 Sprint Plan（含 committed_stories、capacity_total、capacity_used）。
+- **When**: Sprint Plan preflight 检查。
+- **Then**:
+  1. 验证 `capacity_used` + `capacity_buffer` <= `capacity_total`；
+  2. 验证 committed_stories 中每个 Story 的 SP 总和 <= `capacity_total`；
+  3. 验证每个 committed Story 的 `dor_status` = `Passed`；
+  4. 若超出容量，输出 `Escalation: sprint-capacity-exceeded` 并列出超出的 SP 数。
+- **Allow**: 容量标注；超容 Escalation；Story 调整建议。
+- **Forbid**: `capacity_used` > `capacity_total`；未 PO 批准进入 `Approved`。
+- **Evidence**: Sprint Plan 容量数据；超容数量。
+
+## 109. AGILE P0：Blocked Story aging 升级
+
+- **ID**: SC-AGDM-07
+- **Framework**: agile-data-model-rules
+- **Given**: Story US-YY-### 因外部依赖进入 `Blocked` 状态（blk_id、blocker_reason、blocked_date 记录完整）。
+- **When**: AGILE 工作流的每日或周期性检查中，Blocked 状态持续超过 1 个工作日。
+- **Then**:
+  1. 检查 Blocked 条目 `status` = `Open` 且 `blocked_date` 超过 1 工作日；
+  2. 输出升级建议：联系 Stakeholder 或调整 Sprint；
+  3. Blocked Story 的 SP 不计入 Sprint Velocity；
+  4. 若超过 3 工作日仍未解除，输出 `Escalation: long-term-blocked`。
+- **Allow**: 升级建议；Velocity 计算排除；Sprint 调整建议。
+- **Forbid**: 不记录 blocker_reason 直接 `Resolved`；长期 Blocked 不升级；Blocked SP 计入 Velocity。
+- **Evidence**: Blocked 条目；blocked_date；升级建议内容。
+
+## 110. AGILE P0：Carry-over 必须重新确认
+
+- **ID**: SC-AGDM-08
+- **Framework**: agile-data-model-rules
+- **Given**: Sprint N 结束，Story US-YY-### 未达到 DoD，PO 确认业务价值仍然有效。
+- **When**: Carry-over 流程中，Story 从 Sprint N → Sprint N+1。
+- **Then**:
+  1. 记录 ADM-11 Carry-over 条目（co_id、story_id、source_sprint、target_sprint、carry_reason）；
+  2. carry_reason 必须填写：External Dependency / Estimation Gap / Requirement Change / Other；
+  3. PO 重新确认 `po_confirmed` = true；
+  4. DoR 重新评估 `dor_reassessed` = true；
+  5. 两条均满足后 Story 才能进入下一 Sprint committed。
+- **Allow**: Carry-over 条目；PO 重新确认；DoR 重新评估；Carry-over Reason 记录。
+- **Forbid**: 静默滚动（不经 PO 确认进入下一 Sprint）；不重新评估 DoR；carry_reason 为空。
+- **Evidence**: Carry-over 条目内容；po_confirmed 状态；dor_reassessed 状态。
+
+## 111. AGILE P0：DoR / DoD / Acceptance Criteria 不得互换
+
+- **ID**: SC-AGDM-09
+- **Framework**: agile-data-model-rules
+- **Given**: Tech Owner 和 PO 对 Story US-YY-### 进行质量检查，试图将 DoR 检查结果写入 DoD 字段。
+- **When**: AGILE 工作流中，Story 状态 `Committed` → `Done` 的 preflight 检查。
+- **Then**:
+  1. 验证 DoD checklist（至少 4 条）与 DoR checklist 不同；
+  2. 验证 ADM-06（DoR）与 ADM-07（DoD）的 `object_id` 格式不同（DOR-US-YY-### vs DOD-US-YY-###）；
+  3. 若发现 DoR 内容写入 DoD 字段，或 AC 替代 DoD，输出 `Escalation: dor-dod-confused`；
+  4. Story 不得标记为 `Done`，直至 DoD checklist 全部完成。
+- **Allow**: 独立的 DoR 和 DoD checklist；DoR 作为 DoD 前置条件。
+- **Forbid**: DoR 检查结果写入 DoD 字段；AC 替代 DoD checklist；跳过 DoD checklist 直接标记 `Done`。
+- **Evidence**: DoR checklist 内容；DoD checklist 内容；Escalation 内容。
+
+## 112. AGILE P0：Markdown 模板与 JSON 目标契约映射
+
+- **ID**: SC-AGDM-10
+- **Framework**: agile-data-model-rules
+- **Given**: AGILE 工作流中，PM 执行 Story 完成后，需要同步 Backlog 数据（Markdown → JSON）。
+- **When**: 同步 `02_AGILE/PM_USER_STORIES.md` → `07_DATA/backlog.json` 时。
+- **Then**:
+  1. 验证 ADM-03 User Story 的 required_fields（story_id、as_a、i_want、so_that、acceptance_criteria、story_point、priority、owner、sprint_id、status、dor_status、dod_status）全部存在于 Markdown 条目中；
+  2. 验证 json_target 字段指向正确的 `07_DATA/backlog.json`；
+  3. 若字段缺失，输出 `Gap: story-missing-[field]`；
+  4. 若 JSON 写入失败，不得覆盖 Markdown 权威源（遵循 Markdown → JSON 恢复方向）。
+- **Allow**: Gap 标注；字段补充建议；Markdown 权威优先。
+- **Forbid**: 字段缺失时跳过同步；JSON 覆盖 Markdown 权威源；同步后 Story 字段与 JSON 不一致。
+- **Evidence**: Markdown 条目内容；JSON 输出内容；一致性检查结果。

@@ -62,7 +62,7 @@ Layer 3: Gate Evaluation
 每个工作流对象必须包含以下字段：
 
 > **具体实现**：INIT、INTAKE、APPLY、TAKEOVER、AUDIT 五个 P0 工作流的完整行为契约（包括 8 字段详细定义、P0/P1 边界、failure_escalation 规则）见 `references/project-workflow-rules.md`。
-> **专业工作流补充**：BRIEFING、MEETING、TODO、REPORT_DAILY、REPORT_PERIODIC、DASHBOARD_SYNC 六个 P0 专业工作流的完整行为契约（包括 9 字段详细定义、quality_checks、禁止编造规则）见 `references/communication-and-reporting-rules.md`。
+> **专业工作流补充**：BRIEFING、MEETING、TODO、REPORT_DAILY、REPORT_PERIODIC、REPORT_STEERING 六个 P0 专业工作流的完整行为契约（包括 9 字段详细定义、quality_checks、禁止编造规则）见 `references/communication-and-reporting-rules.md`。
 
 | 字段 | 说明 | 约束 |
 |---|---|---|

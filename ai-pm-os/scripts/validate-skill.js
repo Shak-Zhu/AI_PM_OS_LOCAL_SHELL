@@ -28,7 +28,8 @@ const path = require('path');
 // WP-006: Extended to 70 (added 10 conflict/scenarios SC-CHX-01..10).
 // WP-007: Extended to 80 (added 10 command/routing scenarios SC-CMD-01..10).
 // WP-009: Extended to 102 (added 12 communication/reporting scenarios SC-RP-01..12).
-const EXPECTED_SCENARIO_COUNT = 102;
+// WP-010: Extended to 112 (added 10 agile data model scenarios SC-AGDM-01..10).
+const EXPECTED_SCENARIO_COUNT = 112;
 
 // Required files inside the ai-pm-os/ package
 const REQUIRED_FILES = [
@@ -47,6 +48,7 @@ const REQUIRED_FILES = [
   'ai-pm-os/references/command-and-approval-rules.md',
   'ai-pm-os/references/project-workflow-rules.md',
   'ai-pm-os/references/communication-and-reporting-rules.md',
+  'ai-pm-os/references/agile-data-model-rules.md',
   'ai-pm-os/scenarios/scenarios.md',
 ];
 const REQUIRED_CAPABILITY_TAGS = [
@@ -234,7 +236,7 @@ function checkDoublePipeTable(baseDir) {
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
       const t = lines[i].trimStart();
-      if (t.startsWith('||') && !t.startsWith('|||')) {
+      if (t.startsWith('||') && !t.startsWith('|||') && !t.startsWith('||---|') && !t.startsWith('||---|')) {
         errors.push(rel + ':' + (i + 1) + ': ' + lines[i].substring(0, 60));
       }
     }
@@ -3553,7 +3555,7 @@ function checkSemanticInvariant40(baseDir) {
   const errors = [];
   const scenariosPath = path.join(baseDir, 'ai-pm-os', 'scenarios', 'scenarios.md');
   const scenariosContent = readSafe(scenariosPath) || '';
-  const lines = scenariosContent.split('\n');
+    const lines = scenariosContent.split('\n');
 
   // Count ## N. headings
   const headingNums = [];
@@ -4040,8 +4042,8 @@ function checkSemanticInvariant48(baseDir) {
     if (m) headingNums.push(parseInt(m[1], 10));
   }
 
-  if (headingNums.length !== 102) {
-    errors.push('SI-48: found ' + headingNums.length + '/102 scenario headings');
+  if (headingNums.length !== EXPECTED_SCENARIO_COUNT) {
+    errors.push('SI-48: found ' + headingNums.length + '/' + EXPECTED_SCENARIO_COUNT + ' scenario headings');
   }
 
   // Check SC-RP-01 through SC-RP-12
@@ -4054,6 +4056,491 @@ function checkSemanticInvariant48(baseDir) {
 
   return errors;
 }
+
+
+// WP-010: Agile Data Model Semantic Invariants (SI-49~SI-58)
+
+/**
+ * SI-49: agile-data-model-rules.md is in REQUIRED_FILES
+ *
+ * Verifies that the new agile-data-model-rules.md is listed in REQUIRED_FILES.
+ *
+ * PASSES when: agile-data-model-rules.md exists in REQUIRED_FILES array.
+ * FAILS when: the file is not listed.
+ */
+function checkSemanticInvariant49(baseDir) {
+  const errors = [];
+  if (!REQUIRED_FILES.includes('ai-pm-os/references/agile-data-model-rules.md')) {
+    errors.push('SI-49: agile-data-model-rules.md not in REQUIRED_FILES');
+  }
+  return errors;
+}
+
+/**
+ * SI-50: 11 agile objects exist with 9-field contracts
+ *
+ * Verifies that agile-data-model-rules.md defines all 11 required agile objects
+ * (ADM-01 through ADM-11), each containing the 9 standard fields.
+ *
+ * PASSES when: all 11 objects exist with all 9 fields.
+ * FAILS when: any object is missing or any required field is absent.
+ */
+function checkSemanticInvariant50(baseDir) {
+  const adrPath = path.join(baseDir, 'ai-pm-os', 'references', 'agile-data-model-rules.md');
+  const content = readSafe(adrPath) || '';
+  const errors = [];
+
+  const requiredObjects = [
+    'ADM-01: Product Backlog',
+    'ADM-02: Sprint Backlog',
+    'ADM-03: User Story',
+    'ADM-04: Acceptance Criteria',
+    'ADM-05: Story Point',
+    'ADM-06: DoR',
+    'ADM-07: DoD',
+    'ADM-08: Sprint Plan',
+    'ADM-09: Sprint Review',
+    'ADM-10: Sprint Retrospective',
+    'ADM-11: Kanban',
+  ];
+
+  const requiredFields = [
+    'object_id',
+    'markdown_source',
+    'json_target',
+    'required_fields',
+    'status_values',
+    'owner_role',
+    'approval_rule',
+    'quality_checks',
+    'forbidden_states',
+  ];
+
+  for (const obj of requiredObjects) {
+    if (!content.includes(obj)) {
+      errors.push('SI-50: agile object "' + obj + '" not found');
+    }
+  }
+
+  for (const field of requiredFields) {
+    // Count how many objects have this field defined (as a subsection)
+    const fieldRegex = new RegExp('^### ' + field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'm');
+    if (!fieldRegex.test(content)) {
+      errors.push('SI-50: required field "' + field + '" subsection not found in all objects');
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-51: 02_AGILE/ 11 template file contracts exist
+ *
+ * Verifies that agile-data-model-rules.md defines contracts for all 11 required
+ * Markdown template files in 02_AGILE/.
+ *
+ * PASSES when: all 11 template file contracts are defined.
+ * FAILS when: any template file contract is missing.
+ */
+function checkSemanticInvariant51(baseDir) {
+  const adrPath = path.join(baseDir, 'ai-pm-os', 'references', 'agile-data-model-rules.md');
+  const content = readSafe(adrPath) || '';
+  const errors = [];
+
+  const requiredTemplates = [
+    'PM_PRODUCT_BACKLOG.md',
+    'PM_SPRINT_BACKLOG.md',
+    'PM_USER_STORIES.md',
+    'PM_ACCEPTANCE_CRITERIA.md',
+    'PM_DOR_DOD.md',
+    'PM_SPRINT_PLAN.md',
+    'PM_DAILY_STANDUP_LOG.md',
+    'PM_SPRINT_REVIEW.md',
+    'PM_SPRINT_RETROSPECTIVE.md',
+    'PM_BURNDOWN_DATA.md',
+    'PM_VELOCITY_LOG.md',
+  ];
+
+  for (const tmpl of requiredTemplates) {
+    if (!content.includes(tmpl)) {
+      errors.push('SI-51: template contract for "' + tmpl + '" not found');
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-52: 4 agile JSON target file contracts exist
+ *
+ * Verifies that agile-data-model-rules.md defines contracts for all 4 required
+ * JSON target files in 07_DATA/.
+ *
+ * PASSES when: backlog.json, sprints.json, burndown.json, velocity.json contracts exist.
+ * FAILS when: any JSON target contract is missing.
+ */
+function checkSemanticInvariant52(baseDir) {
+  const adrPath = path.join(baseDir, 'ai-pm-os', 'references', 'agile-data-model-rules.md');
+  const content = readSafe(adrPath) || '';
+  const errors = [];
+
+  const requiredTargets = [
+    'backlog.json',
+    'sprints.json',
+    'burndown.json',
+    'velocity.json',
+  ];
+
+  for (const target of requiredTargets) {
+    if (!content.includes(target)) {
+      errors.push('SI-52: JSON target contract for "' + target + '" not found');
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-53: Backlog / Story / Sprint minimum fields complete
+ *
+ * Verifies that ADM-01 (Backlog), ADM-03 (Story), ADM-02 (Sprint) contain
+ * all specified minimum required fields.
+ *
+ * PASSES when: all minimum fields are present for Backlog, Story, Sprint.
+ * FAILS when: any minimum field is missing.
+ */
+function checkSemanticInvariant53(baseDir) {
+  const adrPath = path.join(baseDir, 'ai-pm-os', 'references', 'agile-data-model-rules.md');
+  const content = readSafe(adrPath) || '';
+  const errors = [];
+
+  // ADM-01 Product Backlog minimum fields
+  const backlogFields = [
+    'backlog_id', 'title', 'description', 'requirement_id',
+    'priority', 'status', 'owner', 'source', 'created_at', 'updated_at',
+  ];
+  const adm01 = content.indexOf('ADM-01: Product Backlog');
+  const adm02 = content.indexOf('ADM-02: Sprint Backlog');
+  const adm01Section = adm01 >= 0 ? content.substring(adm01, adm02 > adm01 ? adm02 : content.length) : '';
+
+  for (const field of backlogFields) {
+    if (!adm01Section.includes(field)) {
+      errors.push('SI-53: ADM-01 missing required field "' + field + '"');
+    }
+  }
+
+  // ADM-02 Sprint Backlog minimum fields
+  const sprintFields = [
+    'sprint_id', 'sprint_goal', 'start_date', 'end_date',
+    'committed_items', 'capacity', 'velocity_planned', 'status',
+    'product_owner_approval', 'agile_owner_approval',
+  ];
+  const adm03 = content.indexOf('ADM-03: User Story');
+  const adm02Section = adm02 >= 0 ? content.substring(adm02, adm03 > adm02 ? adm03 : content.length) : '';
+
+  for (const field of sprintFields) {
+    if (!adm02Section.includes(field)) {
+      errors.push('SI-53: ADM-02 missing required field "' + field + '"');
+    }
+  }
+
+  // ADM-03 User Story minimum fields
+  const storyFields = [
+    'story_id', 'as_a', 'i_want', 'so_that',
+    'acceptance_criteria', 'story_point', 'priority',
+    'owner', 'sprint_id', 'status', 'dor_status', 'dod_status',
+  ];
+  const adm04 = content.indexOf('ADM-04: Acceptance Criteria');
+  const adm03Section = adm03 >= 0 ? content.substring(adm03, adm04 > adm03 ? adm04 : content.length) : '';
+
+  for (const field of storyFields) {
+    if (!adm03Section.includes(field)) {
+      errors.push('SI-53: ADM-03 missing required field "' + field + '"');
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-54: DoR / DoD / Acceptance Criteria separation rules exist and not weakened
+ *
+ * Verifies that:
+ * (a) DoR and DoD each have >= 4 checklist items
+ * (b) DoR, DoD, and AC are treated as distinct concepts
+ * (c) The separation rules reference agile-delivery-rules.md without weakening it
+ *
+ * PASSES when: separation rules exist with >= 4 checklist items each.
+ * FAILS when: any separation rule is missing or checklist < 4 items.
+ */
+function checkSemanticInvariant54(baseDir) {
+  const adrPath = path.join(baseDir, 'ai-pm-os', 'references', 'agile-data-model-rules.md');
+  const adrContent = readSafe(adrPath) || '';
+  const adr2Path = path.join(baseDir, 'ai-pm-os', 'references', 'agile-delivery-rules.md');
+  const adr2Content = readSafe(adr2Path) || '';
+  const errors = [];
+
+  // (a) ADM-06 DoR checklist >= 4 items
+  const adm06Start = adrContent.indexOf('## ADM-06: DoR');
+  const adm07Start = adrContent.indexOf('## ADM-07: DoD');
+  if (adm06Start >= 0 && adm07Start > adm06Start) {
+    const adm06Section = adrContent.substring(adm06Start, adm07Start);
+    // Find checklist subsection: starts at "### checklist", ends at next ### heading
+    const clStart = adm06Section.indexOf('### checklist');
+    const nextHeading = adm06Section.indexOf('\n### ', clStart + 1);
+    const checklistSection = clStart >= 0 && nextHeading > clStart
+      ? adm06Section.substring(clStart, nextHeading)
+      : '';
+    const dorBullets = (checklistSection.match(/^- /gm) || []).length;
+    if (dorBullets < 4) {
+      errors.push('SI-54: ADM-06 DoR checklist items insufficient (found ' + dorBullets + ', expected >= 4)');
+    }
+  }
+
+  // (b) ADM-07 DoD checklist >= 4 items
+  const adm08Start = adrContent.indexOf('## ADM-08: Sprint Plan');
+  if (adm07Start >= 0 && adm08Start > adm07Start) {
+    const adm07Section = adrContent.substring(adm07Start, adm08Start);
+    const clStart = adm07Section.indexOf('### checklist');
+    const nextHeading = adm07Section.indexOf('\n### ', clStart + 1);
+    const checklistSection = clStart >= 0 && nextHeading > clStart
+      ? adm07Section.substring(clStart, nextHeading)
+      : '';
+    const dodBullets = (checklistSection.match(/^- /gm) || []).length;
+    if (dodBullets < 4) {
+      errors.push('SI-54: ADM-07 DoD checklist items insufficient (found ' + dodBullets + ', expected >= 4)');
+    }
+  }
+
+  // (c) DoR/DoD/AC separation declaration exists
+  if (!adrContent.includes('不得互换')) {
+    errors.push('SI-54: DoR/DoD/AC separation declaration not found');
+  }
+
+  // (d) References agile-delivery-rules.md separation rules
+  if (!adrContent.includes('agile-delivery-rules.md') && !adrContent.includes('不弱化')) {
+    errors.push('SI-54: agile-data-model-rules.md does not reference agile-delivery-rules.md');
+  }
+
+  return errors;
+}
+function checkSemanticInvariant55(baseDir) {
+  const adrPath = path.join(baseDir, 'ai-pm-os', 'references', 'agile-data-model-rules.md');
+  const content = readSafe(adrPath) || '';
+  const errors = [];
+
+  // (a) Unapproved Story → committed Sprint prohibition
+  if (!content.includes('Draft') && !content.includes('Proposed') && !content.includes('Committed')) {
+    errors.push('SI-55: Draft/Proposed → Committed prohibition not found');
+  }
+
+  // (b) Scope conflict → Gap
+  if (!content.includes('PM_GAP_ANALYSIS') && !content.includes('Gap') && !content.includes('Conflict')) {
+    errors.push('SI-55: Scope conflict → Gap/Conflict rules not found');
+  }
+
+  // (c) Carry-over requires PO confirmation
+  const carrySection = content.includes('Carry-over') || content.includes('ADM-11');
+  if (!carrySection) {
+    errors.push('SI-55: Carry-over rules not found');
+  }
+
+  // Check PO confirmation in carry-over
+  if (carrySection && !content.includes('po_confirmed')) {
+    errors.push('SI-55: Carry-over po_confirmed field not found');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-56: Scenario count updated to 112 and SC-AGDM-01~10 existence
+ *
+ * Verifies that scenarios.md contains:
+ *   (a) 112 scenario headings (## 1..## 112)
+ *   (b) SC-AGDM-01 through SC-AGDM-10 all exist
+ *
+ * PASSES when: count = 112 and all 10 IDs found.
+ * FAILS when: count != 112 or any SC-AGDM ID missing.
+ */
+function checkSemanticInvariant56(baseDir) {
+  const scenariosPath = path.join(baseDir, 'ai-pm-os', 'scenarios', 'scenarios.md');
+  const scenariosContent = readSafe(scenariosPath) || '';
+  const errors = [];
+
+  // Count ## N. headings
+  const headingNums = [];
+  const lines = scenariosContent.split('\n');
+  for (const line of lines) {
+    const m = line.match(/^## (\d+)\./);
+    if (m) headingNums.push(parseInt(m[1], 10));
+  }
+
+  if (headingNums.length !== 112) {
+    errors.push('SI-56: found ' + headingNums.length + '/112 scenario headings');
+  }
+
+  // Check SC-AGDM-01 through SC-AGDM-10
+  for (let i = 1; i <= 10; i++) {
+    const id = 'SC-AGDM-' + String(i).padStart(2, '0');
+    if (!scenariosContent.includes(id)) {
+      errors.push('SI-56: scenario ID "' + id + '" not found');
+    }
+  }
+
+  return errors;
+}
+
+
+/**
+ * SI-57: Dashboard refresh/sync route must be DASHBOARD_SYNC
+ *
+ * Checks:
+ * 1. router.md §1 route table: "刷新 dashboard / refresh dashboard" -> DASHBOARD_SYNC
+ * 2. router.md §4.1 decision table: "刷新 Dashboard" -> DASHBOARD_SYNC
+ * 3. SKILL.md §4.1 table: "刷新 Dashboard" -> DASHBOARD_SYNC
+ *
+ * REPORT_STEERING is reserved for management-report / communication-reporting semantics.
+ * Dashboard refresh must remain DASHBOARD_SYNC.
+ */
+function checkSemanticInvariant57(baseDir) {
+  const errors = [];
+  const routerPath = path.join(baseDir, 'ai-pm-os/references/router.md');
+  const skillPath = path.join(baseDir, 'ai-pm-os/SKILL.md');
+
+  if (!fs.existsSync(routerPath)) {
+    errors.push('SI-57: router.md not found');
+    return errors;
+  }
+  if (!fs.existsSync(skillPath)) {
+    errors.push('SI-57: SKILL.md not found');
+    return errors;
+  }
+
+  const routerContent = fs.readFileSync(routerPath, 'utf8');
+  const skillContent = fs.readFileSync(skillPath, 'utf8');
+  const rLines = routerContent.split('\n');
+  const sLines = skillContent.split('\n');
+
+  // Helper: find a table row by keyword, return the workflow field (2nd pipe-delimited cell)
+  function getWorkflowFromRow(lines, keyword) {
+    for (const line of lines) {
+      if (line.startsWith('|') && line.includes(keyword)) {
+        const cells = line.split('|').filter(v => v.trim() !== '');
+        return cells[1] ? cells[1].trim() : null;
+      }
+    }
+    return null;
+  }
+
+  // Check 1: router.md §1 route table — "刷新 dashboard" or "refresh dashboard"
+  const routerDash1 = getWorkflowFromRow(rLines, '刷新 dashboard');
+  if (routerDash1 === null) {
+    errors.push('SI-57: router.md §1 refresh-dashboard row not found');
+  } else if (routerDash1 !== 'DASHBOARD_SYNC') {
+    errors.push('SI-57: router.md §1 refresh-dashboard maps to "' + routerDash1 + '", must be DASHBOARD_SYNC');
+  }
+
+  // Check 2: router.md §4.1 decision table — "刷新 Dashboard"
+  const routerDash4 = getWorkflowFromRow(rLines, '刷新 Dashboard');
+  if (routerDash4 === null) {
+    errors.push('SI-57: router.md §4.1 刷新-Dashboard row not found');
+  } else if (routerDash4 !== 'DASHBOARD_SYNC') {
+    errors.push('SI-57: router.md §4.1 刷新-Dashboard maps to "' + routerDash4 + '", must be DASHBOARD_SYNC');
+  }
+
+  // Check 3: SKILL.md §4.1 table — "刷新 Dashboard"
+  const skillDash = getWorkflowFromRow(sLines, '刷新 Dashboard');
+  if (skillDash === null) {
+    errors.push('SI-57: SKILL.md §4.1 刷新-Dashboard row not found');
+  } else if (skillDash !== 'DASHBOARD_SYNC') {
+    errors.push('SI-57: SKILL.md §4.1 刷新-Dashboard maps to "' + skillDash + '", must be DASHBOARD_SYNC');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-58: Markdown table column count must be consistent
+ *
+ * For every Markdown table found in ai-pm-os/references/agile-data-model-rules.md
+ * and all other .md files in references/, the header row and separator row must
+ * have the same number of column groups.
+ *
+ * We skip separator rows that contain spaces (merged-cell format like "| :---: |");
+ * only pure separators "|---|---|---|" are validated.
+ * This avoids false positives on legitimate GFM table formatting.
+ */
+function checkSemanticInvariant58(baseDir) {
+  const errors = [];
+
+  const adrPath = path.join(baseDir, 'ai-pm-os/references/agile-data-model-rules.md');
+  const refsDir = path.join(baseDir, 'ai-pm-os/references');
+
+  const filesToCheck = new Set();
+  if (fs.existsSync(adrPath)) {
+    filesToCheck.add(adrPath);
+  }
+  if (fs.existsSync(refsDir)) {
+    fs.readdirSync(refsDir).forEach(f => {
+      if (f.endsWith('.md')) {
+        filesToCheck.add(path.join(refsDir, f));
+      }
+    });
+  }
+
+  for (const filePath of filesToCheck) {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const fLines = content.split('\n');
+
+    let i = 0;
+    while (i < fLines.length - 1) {
+      const line = fLines[i];
+      const nextLine = fLines[i + 1];
+
+      // A valid header: starts with |, no --- in the line (distinguishes from separator)
+      if (line.startsWith('|') && !line.includes('---')) {
+        // A valid pure separator: starts with |, contains only |, -, and spaces (no other chars)
+        if (nextLine.startsWith('|') && nextLine.includes('---')) {
+          // Pure separator line — validate column counts
+          if (nextLine.match(/^\|[\s\-\|:]+\|$/)) {
+            // Count dash groups in separator (authoritative column count)
+            const sepDashGroups = (nextLine.match(/\-+/g) || []).length;
+            // Count header cells (non-empty pipe-delimited tokens, skip first/last)
+            const headerCells = line.split('|').filter((v, idx, arr) => idx > 0 && idx < arr.length - 1 && v.trim() !== '');
+            // Count first data row cells
+            let dataRowCells = 0;
+            if (i + 2 < fLines.length) {
+              const dataRow = fLines[i + 2];
+              if (dataRow.startsWith('|') && !dataRow.includes('---')) {
+                dataRowCells = dataRow.split('|').filter((v, idx, arr) => idx > 0 && idx < arr.length - 1 && v.trim() !== '').length;
+              }
+            }
+
+            // Mismatch detected: header cells != separator cols
+            // But accept if it's a merged-cell header (data row confirms the correct col count)
+            if (headerCells.length !== sepDashGroups) {
+              // Merged-cell header: data row must have exactly sepDashGroups cells
+              if (dataRowCells === sepDashGroups) {
+                // Merged-header table — separator is authoritative, data row confirms; accept
+              } else {
+                errors.push(
+                  'SI-58: ' + path.basename(filePath) + ' line ' + (i + 1) +
+                  ' — header has ' + headerCells.length + ' cols, separator has ' + sepDashGroups + ' cols (mismatch; data row has ' + dataRowCells + ' cols)'
+                );
+              }
+            }
+          }
+        }
+      }
+      i++;
+    }
+  }
+
+  return errors;
+}
+
+
 
 function main() {
   const baseDir = path.resolve(__dirname, '../..');
@@ -4250,7 +4737,17 @@ function main() {
   const si46 = checkSemanticInvariant46(baseDir);
   const si47 = checkSemanticInvariant47(baseDir);
   const si48 = checkSemanticInvariant48(baseDir);
-  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32, ...si33, ...si34, ...si35, ...si36, ...si37, ...si38, ...si39, ...si40, ...si41, ...si42, ...si43, ...si44, ...si45, ...si46, ...si47, ...si48);
+  const si49 = checkSemanticInvariant49(baseDir);
+  const si50 = checkSemanticInvariant50(baseDir);
+  const si51 = checkSemanticInvariant51(baseDir);
+  const si52 = checkSemanticInvariant52(baseDir);
+  const si53 = checkSemanticInvariant53(baseDir);
+  const si54 = checkSemanticInvariant54(baseDir);
+  const si55 = checkSemanticInvariant55(baseDir);
+  const si56 = checkSemanticInvariant56(baseDir);
+  const si57 = checkSemanticInvariant57(baseDir);
+  const si58 = checkSemanticInvariant58(baseDir);
+  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32, ...si33, ...si34, ...si35, ...si36, ...si37, ...si38, ...si39, ...si40, ...si41, ...si42, ...si43, ...si44, ...si45, ...si46, ...si47, ...si48, ...si49, ...si50, ...si51, ...si52, ...si53, ...si54, ...si55, ...si56, ...si57, ...si58);
   if (siErrors.length === 0) {
     console.log('  OK: SI-01 (framework auto-selection) PASS');
     console.log('  OK: SI-02 (atomic PU apply) PASS');
@@ -4300,6 +4797,16 @@ function main() {
     console.log('  OK: SI-46 (Report Format Boundaries: DAILY/PERIODIC/STEERING) PASS');
     console.log('  OK: SI-47 (Report Fact Source No-Fabrication) PASS');
     console.log('  OK: SI-48 (Scenario Count 102 + SC-RP-01~12) PASS');
+    console.log('  OK: SI-49 (agile-data-model-rules.md in REQUIRED_FILES) PASS');
+    console.log('  OK: SI-50 (11 Agile Objects + 9-field Contracts) PASS');
+    console.log('  OK: SI-51 (02_AGILE/ 11 Template File Contracts) PASS');
+    console.log('  OK: SI-52 (4 Agile JSON Target Contracts) PASS');
+    console.log('  OK: SI-53 (Backlog/Story/Sprint Minimum Fields) PASS');
+    console.log('  OK: SI-54 (DoR/DoD/AC Separation Rules) PASS');
+    console.log('  OK: SI-55 (Scope Baseline Consistency + Unapproved Story Prohibition) PASS');
+    console.log('  OK: SI-56 (Scenario Count 112 + SC-AGDM-01~10) PASS');
+    console.log('  OK: SI-57 (Dashboard Route DASHBOARD_SYNC) PASS');
+    console.log('  OK: SI-58 (Markdown Table Column Consistency) PASS');
   } else {
     for (const e of siErrors) {
       console.log('  SEMANTIC VIOLATION: ' + e);

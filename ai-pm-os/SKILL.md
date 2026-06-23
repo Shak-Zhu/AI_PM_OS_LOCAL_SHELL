@@ -221,15 +221,15 @@ target_agents: [Cursor, Codex]
 - **6 个 Gate 结果状态**：gate_passed、gate_failed、approval_required、blocked_by_conflict、blocked_by_dirty_worktree、unrouted_intent。
 - **9 个审批状态**：Draft、Proposed、Pending Review、Approved、Rejected、Superseded、Applied、Human Accepted、Parked。
 - **9 类角色**：PM Owner、Human Owner、PM Reviewer、Sponsor Approver、Product Owner、Tech Owner、Business Owner、Agile Owner、UAT Owner。
-- **12 个 P0 工作流**：INIT、INTAKE、MEETING、BRIEFING、TODO、APPLY、REPORT_DAILY、REPORT_WEEKLY、DASHBOARD_SYNC、TAKEOVER、AUDIT、AGILE。
+- **12 个 P0 工作流**：INIT、INTAKE、MEETING、BRIEFING、TODO、APPLY、REPORT_DAILY、REPORT_WEEKLY、REPORT_STEERING、TAKEOVER、AUDIT、AGILE。
 - **INIT/INTAKE/APPLY/TAKEOVER/AUDIT 详细行为规则**：含 P0/P1 边界、失败升级、禁止动作，见 `references/project-workflow-rules.md`。
-- **BRIEFING/MEETING/TODO/REPORT_DAILY/REPORT_PERIODIC/DASHBOARD_SYNC 详细行为规则**：含 9 字段定义、质量检查、事实来源禁止编造规则，见 `references/communication-and-reporting-rules.md`。
+- **BRIEFING/MEETING/TODO/REPORT_DAILY/REPORT_PERIODIC/REPORT_STEERING 详细行为规则**：含 9 字段定义、质量检查、事实来源禁止编造规则，见 `references/communication-and-reporting-rules.md`。
 - **个人默认角色**：单人用户默认承担 PM Owner、Human Owner、PM Reviewer、Sponsor Approver；规则支持未来拆分。
 - **Fail-Closed**：跳过审批/前置门/直接写 Approved Baseline/直接进入 Sprint 均阻断。
 
 ## 7. 行为场景
 
-≥50 个 Given / When / Then 行为场景见 `scenarios/scenarios.md`，覆盖：
+≥112 个 Given / When / Then 行为场景见 `scenarios/scenarios.md`，覆盖：
 
 - 4 个专业框架组合（PMBOK / PRINCE2 / APM / PMO / Scrum / Kanban / Hybrid）
 - 4 个审批与权限（PU 绕过、Approved Baseline 覆盖、Sprint / Scope 冲突、Owner 缺失）
@@ -239,8 +239,14 @@ target_agents: [Cursor, Codex]
 - 4 个 Memory / Recovery 场景
 - 8 个 Critical Output Contract 场景（SC-COC-01~08）
 - 10 个执行完整性场景（SC-EI-01~10，幂等、重放、检查点、部分失败恢复）
+- 10 个冲突治理场景（SC-CHX-01~10）
+- 10 个命令路由场景（SC-CMD-01~10）
+- 12 个沟通报告场景（SC-RP-01~12，BRIEFING/MEETING/TODO/报告）
+- 10 个敏捷数据模型场景（SC-AGDM-01~10）
 
-合计 60 个场景。
+合计 112 个场景。
+
+敏捷数据模型契约（DoR/DoD/Story Point/Backlog/Sprint 等）详见 `references/agile-data-model-rules.md`。
 
 ## 8. 安装与调用
 
