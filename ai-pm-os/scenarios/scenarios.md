@@ -1096,3 +1096,196 @@
   不得生成第二个 Action/Decision/JSON 条目；
   不得将重复到达当作新工作处理。
 - **Evidence**: 六字段匹配验证、既有 `execution_id` 引用、`last_seen_at` 更新记录。
+
+---
+
+## 61. C-01：同一对象状态冲突（Decision 矛盾）
+
+- **ID**: SC-CHX-01
+- **Framework**: PMO + conflict-and-chaos-rules
+- **Given**: `PM_DECISION_LOG.md` 中 DEC-037 状态为 `Approved`；用户上传一份会议纪要，其中 DEC-037 状态被标注为 `Rejected`。
+- **When**: Skill 路由到 `INTAKE`，读取两份材料进行状态对比。
+- **Then**:
+  1. 检测到 DEC-037 状态冲突（`Approved` vs `Rejected`）；
+  2. 进入 `Conflict: state-conflict`（C-01）；
+  3. 写入 `PM_GAP_ANALYSIS.md` → `GAP-CFL-061`；
+  4. 两份来源均保留，注明冲突；
+  5. 输出 `Escalation: state-conflict`；
+  6. 请求 Human Owner 裁定 DEC-037 最终状态。
+- **Allow**: 写 Gap；请求 L1 裁定；保留两份来源。
+- **Forbid**: 不得自动选择其中一方；不得将冲突条目写入 Approved Baseline；
+  不得输出 `issued` / `accepted` / `complete`。
+- **Evidence**: `PM_DECISION_LOG.md`、`PM_INPUT_LOG.md`、`PM_GAP_ANALYSIS.md`。
+
+---
+
+## 62. C-02：范围 / 需求冲突（需求描述矛盾）
+
+- **ID**: SC-CHX-02
+- **Framework**: PMO + conflict-and-chaos-rules
+- **Given**: `PM_REQUIREMENTS_REGISTER.md` 中 REQ-042 描述为"基础看板（5张卡片）"；用户上传一份新文档，其中 REQ-042 描述为"企业级看板（含 RBAC、SSO、审计日志）"。
+- **When**: Skill 路由到 `INTAKE`，检测到 REQ-042 描述冲突。
+- **Then**:
+  1. 检测到 REQ-042 描述冲突（基础看板 vs 企业级看板）；
+  2. 进入 `Conflict: requirement-scope`（C-02）；
+  3. 写入 `PM_GAP_ANALYSIS.md` → `GAP-CFL-062`；
+  4. 写入 `PM_PENDING_UPDATES.md` → `PU-CHG-062`，提议需求澄清会议；
+  5. 不修改 `PM_REQUIREMENTS_REGISTER.md`；
+  6. 输出 `Conflict: requirement-scope`。
+- **Allow**: 写 Gap + PU；请求 L1 澄清。
+- **Forbid**: 不得自动选择基础版或企业版；不得直接更新 REQ-042；
+  不得将任一描述写入 Approved Baseline。
+- **Evidence**: `PM_REQUIREMENTS_REGISTER.md`、`PM_GAP_ANALYSIS.md`、`PM_PENDING_UPDATES.md`。
+
+---
+
+## 63. C-03：审批状态冲突（Human Owner 声称未批准）
+
+- **ID**: SC-CHX-03
+- **Framework**: PMO + conflict-and-chaos-rules
+- **Given**: `PM_PENDING_UPDATES.md` 中 PU-015 状态为 `Approved`（含审批时间戳）；Human Owner 声称"我没有批准过 PU-015"。
+- **When**: Skill 路由到 `APPLY`，尝试应用 PU-015。
+- **Then**:
+  1. 检测到 PU-015 审批状态冲突（记录为 `Approved` vs Human Owner 声称未批准）；
+  2. 进入 `Conflict: approval-conflict`（C-03）；
+  3. 写入 `PM_GAP_ANALYSIS.md` → `GAP-CFL-063`；
+  4. 写入 `PM_RAID_LOG.md` → `R-2026-063`，标 `approval-integrity-risk`；
+  5. 拒绝应用 PU-015，直至冲突解决；
+  6. 输出 `Escalation: approval-conflict`。
+- **Allow**: 写 Gap + RAID；请求 Human Owner 提供审批证据或重新审批。
+- **Forbid**: 不得在冲突未解决时应用 PU-015；不得将 Human Owner 声称作为推翻记录的依据；
+  不得删除 `Approved` 记录。
+- **Evidence**: `PM_PENDING_UPDATES.md`、`PM_GAP_ANALYSIS.md`、`PM_RAID_LOG.md`。
+
+---
+
+## 64. C-04：Markdown / JSON 事实冲突（JSON 较新但 Markdown 缺失）
+
+- **ID**: SC-CHX-04
+- **Framework**: PMO + conflict-and-chaos-rules
+- **Given**: `07_DATA/project_state.json` 中 REQ-042 状态为 `In Progress`，更新时间戳为今天；`01_PM_DOCUMENTS/PM_REQUIREMENTS_REGISTER.md` 中 REQ-042 条目被用户误删（Markdown 文件中无 REQ-042 记录）。
+- **When**: Skill 路由到 `DASHBOARD_SYNC`，检测到 JSON 较新但 Markdown 缺失。
+- **Then**:
+  1. 检测到 JSON 较新但 Markdown 缺失；
+  2. 进入 `Conflict: json-without-markdown`（C-04）；
+  3. 写入 `PM_GAP_ANALYSIS.md` → `GAP-SYN-064`；
+  4. 不得从 JSON 重建 Markdown 事实；
+  5. 不得将 JSON 的 `In Progress` 状态升为 Approved Baseline 事实；
+  6. 请求 Human Owner 提供 REQ-042 的 Markdown 源文件。
+- **Allow**: 写 Gap；请求 Human Owner 提供 Markdown 源。
+- **Forbid**: 不得从 JSON 重建 Markdown；不得将 JSON 较新值作为正式事实；
+  不得用 JSON 覆盖 Approved Baseline。
+- **Evidence**: `07_DATA/project_state.json`、`PM_GAP_ANALYSIS.md`、`PM_REQUIREMENTS_REGISTER.md`。
+
+---
+
+## 65. M-01：缺 Owner（Issue 无 owner）
+
+- **ID**: SC-CHX-05
+- **Framework**: PMO + conflict-and-chaos-rules
+- **Given**: `PM_RAID_LOG.md` 中 R-2026-042 状态为 `Issue`，`owner` 字段为空；用户调用 `/ai-pm-os 今日 briefing`。
+- **When**: Skill 路由到 `BRIEFING`，执行 Action/RAID Audit。
+- **Then**:
+  1. 检测到 R-2026-042 owner 缺失；
+  2. 写入 `PM_GAP_ANALYSIS.md` → `GAP-OWN-065`；
+  3. Briefing 输出包含"需补 R-2026-042 owner"建议；
+  4. 不自动给 R-2026-042 分配 owner。
+- **Allow**: 写 Gap；输出 owner 缺失建议。
+- **Forbid**: 不得自动填 owner；不得将无 owner 的 Issue 写成 Approved 事实；
+  不得关闭 R-2026-042。
+- **Evidence**: `PM_RAID_LOG.md`、`PM_GAP_ANALYSIS.md`。
+
+---
+
+## 66. M-02：缺 Due Date（Milestone 无日期）
+
+- **ID**: SC-CHX-06
+- **Framework**: PMO + conflict-and-chaos-rules
+- **Given**: `PM_WBS_PLAN.md` 中 M-007（里程碑）存在，但 `due_date` 字段为空；用户调用 `/ai-pm-os 今日 briefing`。
+- **When**: Skill 路由到 `BRIEFING`，执行 Milestone 完整性检查。
+- **Then**:
+  1. 检测到 M-007 due_date 缺失；
+  2. 写入 `PM_GAP_ANALYSIS.md` → `GAP-DUE-066`；
+  3. Briefing 输出包含"M-007 需补 due_date"建议；
+  4. 不猜测 due_date；不将无日期里程碑写入 Approved Baseline。
+- **Allow**: 写 Gap；输出 due_date 缺失建议。
+- **Forbid**: 不得猜测日期并写入；不得将无日期里程碑作为有效 Baseline 里程碑。
+- **Evidence**: `PM_WBS_PLAN.md`、`PM_GAP_ANALYSIS.md`。
+
+---
+
+## 67. M-03：缺来源（推断无来源标注）
+
+- **ID**: SC-CHX-07
+- **Framework**: PMO + fact-layers + conflict-and-chaos-rules
+- **Given**: Skill 基于对话记忆推断某 Action 状态为 `Open`，并在对话中输出该推断结论，但无 `source:` 标注或 `Inferred:` 前缀。
+- **When**: Skill 路由到 `BRIEFING`，输出推断结论。
+- **Then**:
+  1. 检测到推断结论无来源标注（`source:` 缺失）；
+  2. 标注 `source: Unknown`；
+  3. 写入 `PM_GAP_ANALYSIS.md` → `GAP-SRC-067`；
+  4. 输出时添加 `Inferred:` 前缀；
+  5. 不得将无来源推断作为 L1 Approved 事实。
+- **Allow**: 写 Gap；添加 `Inferred:` 前缀；标注 `source: Unknown`。
+- **Forbid**: 不得留空来源；不得将无来源推断升为 L1 Approved；
+  不得以对话记忆作为推断来源。
+- **Evidence**: `PM_GAP_ANALYSIS.md`、`PM_DAILY_BRIEFING.md`.
+
+---
+
+## 68. N-01/N-02：命名混乱（重复 REQ-ID）
+
+- **ID**: SC-CHX-08
+- **Framework**: PMO + naming-conventions + conflict-and-chaos-rules
+- **Given**: `PM_REQUIREMENTS_REGISTER.md` 中 REQ-019 出现两次：一个描述"登录功能"，另一个描述"数据导出"。
+- **When**: Skill 路由到 `INTAKE`，执行 ID 一致性扫描。
+- **Then**:
+  1. 检测到 REQ-019 重复（N-02：重复 ID）；
+  2. 进入 `Conflict: duplicate-id`（N-02）；
+  3. 写入 `PM_GAP_ANALYSIS.md` → `GAP-NAM-068`；
+  4. 列出两个冲突位置（含文件路径和行号）；
+  5. 拒绝基于任一 REQ-019 继续执行正式工作流；
+  6. 请求 Human Owner 裁定。
+- **Allow**: 写 Gap；列出冲突位置；请求 Human Owner 裁定。
+- **Forbid**: 不得自动删除或合并重复 ID 条目；不得静默选择其中一个；
+  不得用别名覆盖 Approved Baseline ID。
+- **Evidence**: `PM_REQUIREMENTS_REGISTER.md`、`PM_GAP_ANALYSIS.md`.
+
+---
+
+## 69. N-04/N-05：命名混乱（路径写死 / 跨平台不安全）
+
+- **ID**: SC-CHX-09
+- **Framework**: PMO + naming-conventions + conflict-and-chaos-rules
+- **Given**: 用户在输入材料中包含一个文件路径 `<WINDOWS_ABSOLUTE_PATH_EXAMPLE>`；该路径含 Windows 特有反斜杠和用户名。
+- **When**: Skill 路由到 `INTAKE`，处理包含绝对路径的输入材料。
+- **Then**:
+  1. 检测到绝对路径写死（N-05：跨平台不安全路径）；
+  2. 写入 `PM_GAP_ANALYSIS.md` → `GAP-NAM-069`；
+  3. 提示将绝对路径替换为相对路径或工件名称；
+  4. 不得基于该绝对路径执行文件读取；
+  5. 不得在 Skill 输出中引用该绝对路径。
+- **Allow**: 写 Gap；提示规范化建议。
+- **Forbid**: 不得在跨平台不安全路径上执行文件操作；不得将绝对路径写入正式文件；
+  不得将用户名/机器名路径引用为规范路径。
+- **Evidence**: `PM_GAP_ANALYSIS.md`、`PM_INPUT_LOG.md`.
+
+---
+
+## 70. D-01/D-05：脏工作树写入阻断（无 Git 仓库）
+
+- **ID**: SC-CHX-10
+- **Framework**: PMO + conflict-and-chaos-rules
+- **Given**: 当前工作目录不存在 `.git/`（不是 Git 仓库）；用户调用 `/ai-pm-os 初始化项目`。
+- **When**: Skill 路由到 `INIT`，执行 preflight 时发现无 Git 仓库。
+- **Then**:
+  1. 检测到当前目录不是 Git 仓库；
+  2. 进入 `preflight_blocked`（D-05：无 Git 仓库）；
+  3. 输出 `Escalation: no-git-repository`；
+  4. 写入 `PM_GAP_ANALYSIS.md` → `GAP-DWT-070`；
+  5. 不得在无 Git 仓库时执行写入正式文件；
+  6. 提示用户先执行 `git init` 建立仓库。
+- **Allow**: 写 Gap；提示 `git init`。
+- **Forbid**: 不得在无 Git 仓库时执行写入正式文件；不得自动执行 `git init`；
+  不得跳过 preflight 检查。
+- **Evidence**: `PM_GAP_ANALYSIS.md`、`PM_INPUT_LOG.md`.

@@ -25,7 +25,7 @@ const path = require('path');
 // and Phase 3 checks reference this constant. No scattered magic numbers.
 // WP-017: Extended to 50 (added 8 runtime-compliance scenarios SC-COC-01..08).
 // WP-005: Extended to 60 (added 10 execution-integrity scenarios SC-EI-01..10).
-const EXPECTED_SCENARIO_COUNT = 60;
+const EXPECTED_SCENARIO_COUNT = 70;
 
 // Required files inside the ai-pm-os/ package
 const REQUIRED_FILES = [
@@ -40,6 +40,7 @@ const REQUIRED_FILES = [
   'ai-pm-os/references/memory-and-recovery.md',
   'ai-pm-os/references/runtime-compliance-contracts.md',
   'ai-pm-os/references/execution-integrity.md',
+  'ai-pm-os/references/conflict-and-chaos-rules.md',
   'ai-pm-os/scenarios/scenarios.md',
 ];
 
@@ -203,6 +204,38 @@ function checkAbsolutePaths(baseDir) {
     }
   }
   return hits;
+}
+
+/**
+ * Phase 4b: checkDoublePipeTable — reject malformed Markdown table rows.
+ *
+ * In standard Markdown tables:
+ *   - Header row:    | col1 | col2 | ...
+ *   - Separator row:  |---|----|---...
+ *   - Data rows:     | value1 | value2 | ...
+ * INVALID (bad formatting): lines starting with || (double pipe) that are not
+ * triple-pipe ||| bold-bold-bold column markers.  This catches copy-paste errors
+ * where an extra pipe column marker gets prepended.
+ *
+ * PASSES when: no lines in any ai-pm-os/ .md file start with || but not |||.
+ * FAILS when: any such malformed line is found.
+ */
+function checkDoublePipeTable(baseDir) {
+  const skillDir = path.join(baseDir, 'ai-pm-os');
+  const files = listAllFiles(skillDir, baseDir);
+  const errors = [];
+  for (const { full, rel } of files) {
+    if (!rel.endsWith('.md')) continue;
+    const content = readSafe(full) || '';
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const t = lines[i].trimStart();
+      if (t.startsWith('||') && !t.startsWith('|||')) {
+        errors.push(rel + ':' + (i + 1) + ': ' + lines[i].substring(0, 60));
+      }
+    }
+  }
+  return errors;
 }
 
 /**
@@ -2281,6 +2314,330 @@ function checkSemanticInvariant20(baseDir) {
   return errors;
 }
 
+/**
+ * SI-21: Four Conflict Types — structural parsing (WP-006-R1)
+ *
+ * Uses chapter-boundary extraction + table row count + exact ID set matching.
+ * Rejects: missing section, wrong count, duplicate rows, extra rows, missing IDs.
+ *
+ * PASSES when:
+ *   (a) §1 exists with exactly 4 type markers (C-01, C-02, C-03, C-04)
+ *   (b) §1 table has exactly 4 data rows (no duplicates, no extras)
+ *   (c) All 5 required field names present in §1 content
+ *   (d) §1 table separator row exists
+ *
+ * FAILS when: §1 missing, type count ≠ 4, duplicate/extra rows, missing IDs,
+ *   missing required fields, or missing separator row.
+ */
+function checkSemanticInvariant21(baseDir) {
+  const ccPath = path.join(baseDir, 'ai-pm-os', 'references', 'conflict-and-chaos-rules.md');
+  const ccContent = readSafe(ccPath) || '';
+  const errors = [];
+
+  const sec1Start = ccContent.indexOf('## 1.');
+  if (sec1Start < 0) {
+    errors.push('SI-21a: conflict-and-chaos-rules.md §1 heading missing');
+    return errors;
+  }
+  const sec2Start = ccContent.indexOf('## 2.', sec1Start + 1);
+  const sec1 = ccContent.substring(sec1Start, sec2Start > 0 ? sec2Start : ccContent.length);
+
+  // (a) Exactly 4 type markers in §1
+  const typeRe = /\*\*C-0([1-4])\*\*/g;
+  const found = [];
+  let m;
+  while ((m = typeRe.exec(sec1)) !== null) { found.push(parseInt(m[1], 10)); }
+  const uniqueTypes = [...new Set(found)].sort();
+  if (uniqueTypes.length !== 4) {
+    errors.push('SI-21b: §1 defines ' + uniqueTypes.length + '/4 types: ' + uniqueTypes.join(', '));
+  } else {
+    for (const r of [1, 2, 3, 4]) {
+      if (!uniqueTypes.includes(r)) errors.push('SI-21c: §1 missing C-0' + r);
+    }
+  }
+
+  // (b) Table separator row present
+  if (!/\|[ \-:]+\|[ \-:]+/.test(sec1)) {
+    errors.push('SI-21d: §1 table separator row missing');
+  }
+
+  // (b2) Exactly 4 data rows in the §1 table (count C-0N at start of | lines)
+  // A valid table data row starts with "|" followed by content and contains **C-0N**
+  const dataRowRe = /^\s*\|[^|]*\*\*C-0([1-4])\*\*/gm;
+  const rows = [];
+  while ((m = dataRowRe.exec(sec1)) !== null) { rows.push(parseInt(m[1], 10)); }
+  const uniqueRows = [...new Set(rows)].sort();
+  if (rows.length !== 4) {
+    errors.push('SI-21e: §1 table has ' + rows.length + ' data rows, exactly 4 required (got IDs: ' + rows.join(', ') + ')');
+  }
+  if (uniqueRows.length !== 4) {
+    errors.push('SI-21f: §1 table has duplicate/extra type IDs: ' + rows.join(', '));
+  }
+
+  // (c) All 5 required field names in §1
+  for (const field of ['识别信号', '允许动作', '禁止动作', '输出对象', '失败升级']) {
+    if (!sec1.includes(field)) errors.push('SI-21g: §1 missing field "' + field + '"');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-22: Six Missing Information Types — structural parsing (WP-006-R1)
+ *
+ * Uses chapter-boundary extraction + table row count + exact ID set matching.
+ * Rejects: missing section, wrong count, duplicate/extra rows, missing IDs.
+ *
+ * PASSES when:
+ *   (a) §2 exists with exactly 6 type markers (M-01~M-06)
+ *   (b) §2 table has exactly 6 data rows (no duplicates, no extras)
+ *   (c) All 3 required field names present in §2
+ *
+ * FAILS when: §2 missing, type count ≠ 6, duplicate/extra rows, missing IDs.
+ */
+function checkSemanticInvariant22(baseDir) {
+  const ccPath = path.join(baseDir, 'ai-pm-os', 'references', 'conflict-and-chaos-rules.md');
+  const ccContent = readSafe(ccPath) || '';
+  const errors = [];
+
+  const sec2Start = ccContent.indexOf('## 2.');
+  if (sec2Start < 0) {
+    errors.push('SI-22a: conflict-and-chaos-rules.md §2 heading missing');
+    return errors;
+  }
+  const sec3Start = ccContent.indexOf('## 3.', sec2Start + 1);
+  const sec2 = ccContent.substring(sec2Start, sec3Start > 0 ? sec3Start : ccContent.length);
+
+  // (a) Exactly 6 type markers in §2
+  const typeRe = /\*\*M-0([1-6])\*\*/g;
+  const found = [];
+  let m;
+  while ((m = typeRe.exec(sec2)) !== null) { found.push(parseInt(m[1], 10)); }
+  const uniqueTypes = [...new Set(found)].sort();
+  if (uniqueTypes.length !== 6) {
+    errors.push('SI-22b: §2 defines ' + uniqueTypes.length + '/6 types: ' + uniqueTypes.join(', '));
+  } else {
+    for (const r of [1, 2, 3, 4, 5, 6]) {
+      if (!uniqueTypes.includes(r)) errors.push('SI-22c: §2 missing M-0' + r);
+    }
+  }
+
+  // (b) Exactly 6 data rows in §2 table
+  const dataRowRe = /^\s*\|[^|]*\*\*M-0([1-6])\*\*/gm;
+  const rows = [];
+  while ((m = dataRowRe.exec(sec2)) !== null) { rows.push(parseInt(m[1], 10)); }
+  const uniqueRows = [...new Set(rows)].sort();
+  if (rows.length !== 6) {
+    errors.push('SI-22d: §2 table has ' + rows.length + ' data rows, exactly 6 required (got IDs: ' + rows.join(', ') + ')');
+  }
+  if (uniqueRows.length !== 6) {
+    errors.push('SI-22e: §2 table has duplicate/extra type IDs: ' + rows.join(', '));
+  }
+
+  // (c) All 3 required field names in §2
+  for (const field of ['识别信号', '允许动作', '禁止动作']) {
+    if (!sec2.includes(field)) errors.push('SI-22f: §2 missing field "' + field + '"');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-23: Naming Governance — structural parsing (WP-006-R1)
+ *
+ * Uses chapter-boundary extraction + table row count + exact ID set + content checks.
+ * Rejects: missing section, wrong count, missing N-02, reverse semantics, no prohibition.
+ *
+ * PASSES when:
+ *   (a) §3 exists with at least 3 type markers (N-01, N-02, N-03 minimum)
+ *   (b) §3 has a table with N-01, N-02, N-03 data rows (no duplicate/extra N-02 rows)
+ *   (c) Duplicate ID (N-02) rule requires Conflict or Issue output
+ *   (d) §3 prohibits overwriting Approved Baseline IDs
+ *
+ * FAILS when: §3 missing, N-02 missing, N-02 doesn't require Conflict/Issue,
+ *   or no Approved Baseline prohibition.
+ */
+function checkSemanticInvariant23(baseDir) {
+  const ccPath = path.join(baseDir, 'ai-pm-os', 'references', 'conflict-and-chaos-rules.md');
+  const ccContent = readSafe(ccPath) || '';
+  const errors = [];
+
+  const sec3Start = ccContent.indexOf('## 3.');
+  if (sec3Start < 0) {
+    errors.push('SI-23a: conflict-and-chaos-rules.md §3 heading missing');
+    return errors;
+  }
+  const sec4Start = ccContent.indexOf('## 4.', sec3Start + 1);
+  const sec3 = ccContent.substring(sec3Start, sec4Start > 0 ? sec4Start : ccContent.length);
+
+  // (a) At least 3 naming type markers
+  const typeRe = /\*\*N-0(\d+)\*\*/g;
+  const found = [];
+  let m;
+  while ((m = typeRe.exec(sec3)) !== null) { found.push(parseInt(m[1], 10)); }
+  const uniqueTypes = [...new Set(found)].sort();
+  if (uniqueTypes.length < 3) {
+    errors.push('SI-23b: §3 defines ' + uniqueTypes.length + '/≥3 naming violation types');
+  }
+
+  // (b) Exactly one N-02 row (no duplicate/extra)
+  const n02Re = /^\s*\|[^|]*\*\*N-02\*\*/gm;
+  const n02Rows = [];
+  while ((m = n02Re.exec(sec3)) !== null) { n02Rows.push(m.index); }
+  if (n02Rows.length === 0) {
+    errors.push('SI-23c: §3 missing N-02 (duplicate ID rule)');
+  } else if (n02Rows.length > 1) {
+    errors.push('SI-23d: §3 has ' + n02Rows.length + ' N-02 rows (duplicate entry, need exactly 1)');
+  }
+
+  // (c) N-02 row must require Conflict or Issue output
+  if (n02Rows.length === 1) {
+    const n02Start = n02Rows[0];
+    const n02End = n02Rows.length > 1 ? n02Rows[1] : sec3.indexOf('\n## ', n02Start + 1);
+    const n02Row = sec3.substring(n02Start, n02End > 0 ? n02End : sec3.length);
+    if (!/Conflict|Issue/i.test(n02Row)) {
+      errors.push('SI-23e: §3 N-02 row does not require Conflict or Issue output');
+    }
+  }
+
+  // (d) Prohibition on overwriting Approved Baseline
+  if (!/Approved Baseline|不得.*改写.*Baseline/i.test(sec3)) {
+    errors.push('SI-23f: §3 missing prohibition on overwriting Approved Baseline IDs');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-24: Dirty Worktree Prohibited Actions — structural parsing (WP-006-R1)
+ *
+ * Uses chapter-boundary extraction + per-line prohibition check.
+ * Rejects: missing section, missing forbidden heading, or any missing operation.
+ *
+ * PASSES when:
+ *   (a) §4 exists with ### 4.3 禁止自动 Git 操作 subsection
+ *   (b) All 6 Git operations listed as prohibited (stash, reset, clean, checkout, commit, push)
+ *   (c) "preflight_blocked" mentioned in §4
+ *
+ * FAILS when: §4 or §4.3 heading missing, or any of 6 operations missing,
+ *   or no preflight_blocked mention.
+ */
+function checkSemanticInvariant24(baseDir) {
+  const ccPath = path.join(baseDir, 'ai-pm-os', 'references', 'conflict-and-chaos-rules.md');
+  const ccContent = readSafe(ccPath) || '';
+  const errors = [];
+
+  const sec4Start = ccContent.indexOf('## 4.');
+  if (sec4Start < 0) {
+    errors.push('SI-24a: conflict-and-chaos-rules.md §4 heading missing');
+    return errors;
+  }
+  const sec5Start = ccContent.indexOf('## 5.', sec4Start + 1);
+  const sec4 = ccContent.substring(sec4Start, sec5Start > 0 ? sec5Start : ccContent.length);
+
+  // §4.3 subsection must exist
+  if (!sec4.includes('### 4.3') && !sec4.includes('禁止自动')) {
+    errors.push('SI-24b: §4 missing forbidden operations subsection');
+  }
+
+  // All 6 prohibited Git operations must appear as separate list items
+  const prohibited = [
+    { op: 'git stash', label: 'SI-24c: git stash' },
+    { op: 'git reset', label: 'SI-24d: git reset' },
+    { op: 'git clean', label: 'SI-24e: git clean' },
+    { op: 'git checkout', label: 'SI-24f: git checkout' },
+    { op: 'git commit', label: 'SI-24g: git commit' },
+    { op: 'git push', label: 'SI-24h: git push' },
+  ];
+  for (const { op, label } of prohibited) {
+    if (!sec4.includes(op)) errors.push(label + ' not prohibited in §4');
+  }
+
+  // preflight_blocked must be mentioned
+  if (!/preflight_blocked/i.test(sec4)) {
+    errors.push('SI-24i: §4 does not mention preflight_blocked state');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-25: Markdown/JSON Authority Direction — structural parsing (WP-006-R1)
+ *
+ * Uses chapter-boundary extraction + per-assertion check.
+ * Rejects: missing section, missing authoritative claim, missing sync-layer claim,
+ *   missing prohibition on JSON-over-Markdown, or missing Conflict path for JSON-only.
+ *
+ * PASSES when:
+ *   (a) §5 exists with §5.1 authoritative direction subsection
+ *   (b) "Markdown 是权威" or "Markdown 权威" present in §5
+ *   (c) "JSON 是同步" or "仅作同步" present in §5
+ *   (d) JSON-over-Markdown prohibited in §5
+ *   (e) JSON-without-Markdown handled as Conflict/Gap in §5
+ *
+ * FAILS when: any of the 5 required assertions missing.
+ */
+function checkSemanticInvariant25(baseDir) {
+  const ccPath = path.join(baseDir, 'ai-pm-os', 'references', 'conflict-and-chaos-rules.md');
+  const ccContent = readSafe(ccPath) || '';
+  const errors = [];
+
+  const sec5Start = ccContent.indexOf('## 5.');
+  if (sec5Start < 0) {
+    errors.push('SI-25a: conflict-and-chaos-rules.md §5 heading missing');
+    return errors;
+  }
+  const sec6Start = ccContent.indexOf('## 6.', sec5Start + 1);
+  const sec5 = ccContent.substring(sec5Start, sec6Start > 0 ? sec6Start : ccContent.length);
+
+  // (a) §5.1 authoritative subsection exists
+  if (!sec5.includes('### 5.1') && !sec5.includes('权威方向')) {
+    errors.push('SI-25b: §5 missing authoritative direction subsection');
+  }
+
+  // (b) Markdown authoritative claim
+  if (!/Markdown.*权威|权威.*Markdown/i.test(sec5)) {
+    errors.push('SI-25c: §5 does not state Markdown is authoritative');
+  }
+
+  // (c) JSON as sync layer
+  if (!/JSON.*同步|同步.*层|仅作.*同步/i.test(sec5)) {
+    errors.push('SI-25d: §5 does not describe JSON as sync layer');
+  }
+
+  // (d) JSON-over-Markdown prohibited
+  if (!/JSON.*覆盖.*Markdown|不得.*JSON.*覆盖|禁止.*JSON.*覆盖/i.test(sec5)) {
+    errors.push('SI-25e: §5 does not prohibit JSON from overwriting Markdown');
+  }
+
+  // (e) JSON-without-Markdown handled as Conflict/Gap
+  if (!/Conflict.*json-without|json.*without.*markdown|进入.*Conflict.*Gap/i.test(sec5)) {
+    errors.push('SI-25f: §5 does not handle JSON-without-Markdown as Conflict/Gap');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-26: Scenario Count — exactly 70 scenarios (WP-006)
+ *
+ * Verifies that scenarios.md contains exactly 70 scenario headings (## 1..## 70)
+ * with no gaps, duplicates, or extra headings.  This is a wrapper that re-uses
+ * the existing checkScenarioHeadings() infrastructure (which checks the
+ * EXPECTED_SCENARIO_COUNT constant, already updated to 70).
+ *
+ * PASSES when: exactly 70 scenario headings, sequential 1..70, all have unique IDs.
+ * FAILS when: count ≠ 70, gaps, duplicates, or range violations.
+ */
+function checkSemanticInvariant26(baseDir) {
+  const errors = [];
+  const headingErrors = checkScenarioHeadings(baseDir);
+  if (headingErrors.length > 0) {
+    for (const e of headingErrors) { errors.push('SI-26: ' + e); }
+  }
+  return errors;
+}
+
 function main() {
   const baseDir = path.resolve(__dirname, '../..');
 
@@ -2364,6 +2721,24 @@ function main() {
     }
   }
 
+  // Phase 4b: Markdown table format check — reject || at start of non-header rows
+  // Standard Markdown: table header row starts with | (single pipe).
+  // Table separator row: |---|---... .
+  // Table data rows: | col1 | col2 | ... .
+  // INVALID: lines starting with || (double pipe at column 0, unless it's ||| for
+  //         bold-bold-bold column). This catches sloppy table formatting errors.
+  console.log('');
+  console.log('[Phase 4b] Checking Markdown table format in ai-pm-os...');
+  const dpErrors = checkDoublePipeTable(baseDir);
+  if (dpErrors.length === 0) {
+    console.log('  OK: no malformed table rows (|| at start) detected');
+  } else {
+    for (const e of dpErrors) {
+      console.log('  BAD TABLE ROW: ' + e);
+      totalErrors += 1;
+    }
+  }
+
   // Phase 5: agile-delivery-rules.md content
   console.log('');
   console.log('[Phase 5] Checking agile-delivery-rules.md content...');
@@ -2430,7 +2805,13 @@ function main() {
   const si18 = checkSemanticInvariant18(baseDir);
   const si19 = checkSemanticInvariant19(baseDir);
   const si20 = checkSemanticInvariant20(baseDir);
-  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20);
+  const si21 = checkSemanticInvariant21(baseDir);
+  const si22 = checkSemanticInvariant22(baseDir);
+  const si23 = checkSemanticInvariant23(baseDir);
+  const si24 = checkSemanticInvariant24(baseDir);
+  const si25 = checkSemanticInvariant25(baseDir);
+  const si26 = checkSemanticInvariant26(baseDir);
+  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26);
   if (siErrors.length === 0) {
     console.log('  OK: SI-01 (framework auto-selection) PASS');
     console.log('  OK: SI-02 (atomic PU apply) PASS');
@@ -2452,6 +2833,12 @@ function main() {
     console.log('  OK: SI-18 (at-most-once PU Application) PASS');
     console.log('  OK: SI-19 (Partial Failure Evidence) PASS');
     console.log('  OK: SI-20 (Markdown->JSON Recovery) PASS');
+    console.log('  OK: SI-21 (Four Conflict Types) PASS');
+    console.log('  OK: SI-22 (Missing Information Types) PASS');
+    console.log('  OK: SI-23 (Naming Governance) PASS');
+    console.log('  OK: SI-24 (Dirty Worktree Prohibited Actions) PASS');
+    console.log('  OK: SI-25 (Markdown/JSON Authority Direction) PASS');
+    console.log('  OK: SI-26 (Scenario Count 70) PASS');
   } else {
     for (const e of siErrors) {
       console.log('  SEMANTIC VIOLATION: ' + e);

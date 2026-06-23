@@ -169,6 +169,9 @@ target_agents: [Cursor, Codex]
   详见 `references/execution-integrity.md` §1。
 - **Markdown 权威恢复方向**：Markdown 成功而 JSON 失败时只能 Markdown → JSON。
   详见 `references/execution-integrity.md` §5。
+- **冲突 / 缺失 / 命名 / 脏工作树**：输入矛盾、信息缺失、ID 混乱或 Git 工作树脏时，
+  Skill 必须识别、记录 Gap/Issue/Conflict 并阻断写入，不得自动合并或编造。
+  详见 `references/conflict-and-chaos-rules.md`（C-01~C-04、M-01~M-06、N-01~N-05、D-01~D-05）。
 
 ## 6b. Critical Output Contract（REQ-035 / WP-017）
 
