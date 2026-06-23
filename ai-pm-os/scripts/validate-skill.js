@@ -25,7 +25,9 @@ const path = require('path');
 // and Phase 3 checks reference this constant. No scattered magic numbers.
 // WP-017: Extended to 50 (added 8 runtime-compliance scenarios SC-COC-01..08).
 // WP-005: Extended to 60 (added 10 execution-integrity scenarios SC-EI-01..10).
-const EXPECTED_SCENARIO_COUNT = 70;
+// WP-006: Extended to 70 (added 10 conflict/scenarios SC-CHX-01..10).
+// WP-007: Extended to 80 (added 10 command/routing scenarios SC-CMD-01..10).
+const EXPECTED_SCENARIO_COUNT = 80;
 
 // Required files inside the ai-pm-os/ package
 const REQUIRED_FILES = [
@@ -41,6 +43,7 @@ const REQUIRED_FILES = [
   'ai-pm-os/references/runtime-compliance-contracts.md',
   'ai-pm-os/references/execution-integrity.md',
   'ai-pm-os/references/conflict-and-chaos-rules.md',
+  'ai-pm-os/references/command-and-approval-rules.md',
   'ai-pm-os/scenarios/scenarios.md',
 ];
 
@@ -2638,6 +2641,480 @@ function checkSemanticInvariant26(baseDir) {
   return errors;
 }
 
+/**
+ * SI-27: 12 P0 Workflow Objects — block-level 7-field parsing (WP-007-R1)
+ *
+ * Parses each ### WF-##: block separately and validates:
+ *   - Exactly 12 workflow blocks exist
+ *   - Each block contains exactly 7 fields in its table
+ *   - Each field name is one of the required 7 names
+ *   - No empty field values
+ *   - Each block's workflow_id is one of the 12 expected IDs
+ *
+ * PASSES when: all 12 workflows pass the 7-field structural test.
+ * FAILS when: block count != 12, any block missing/extra/empty field,
+ *   duplicate workflow_id, or extra workflow.
+ */
+function checkSemanticInvariant27(baseDir) {
+  const ccPath = path.join(baseDir, 'ai-pm-os', 'references', 'command-and-approval-rules.md');
+  const ccContent = readSafe(ccPath) || '';
+  const errors = [];
+
+  const VALID_FIELDS = [
+    'workflow_id', 'trigger', 'required_reads', 'preflight_gates',
+    'allowed_outputs', 'forbidden_outputs', 'failure_state',
+  ];
+
+  const VALID_WF_IDS = [
+    'INIT', 'INTAKE', 'MEETING', 'BRIEFING', 'TODO', 'APPLY',
+    'REPORT_DAILY', 'REPORT_WEEKLY', 'DASHBOARD_SYNC', 'TAKEOVER', 'AUDIT', 'AGILE',
+  ];
+
+  // Extract §3 content
+  const sec3Start = ccContent.indexOf('## 3.');
+  if (sec3Start < 0) {
+    errors.push('SI-27: §3 heading missing');
+    return errors;
+  }
+  const sec4Start = ccContent.indexOf('## 4.', sec3Start + 1);
+  const sec3 = ccContent.substring(sec3Start, sec4Start > 0 ? sec4Start : ccContent.length);
+
+  // Split §3 into blocks: each block starts at a ### WF-##: heading
+  const blockRe = /(?:^|\n)(### WF-\d+:\s*\S+)/gm;
+  const blockPositions = [];
+  let m;
+  while ((m = blockRe.exec(sec3)) !== null) {
+    blockPositions.push(m.index);
+  }
+  blockPositions.push(sec3.length); // sentinel end
+
+  if (blockPositions.length - 1 !== 12) {
+    errors.push('SI-27: found ' + (blockPositions.length - 1) + '/12 workflow blocks');
+    return errors;
+  }
+
+  const wfIdsFound = [];
+
+  for (let i = 0; i < blockPositions.length - 1; i++) {
+    const blockText = sec3.substring(blockPositions[i], blockPositions[i + 1]);
+    const blockLines = blockText.split('\n');
+
+    // Extract workflow_id from block heading
+    const headingMatch = blockText.match(/^### WF-\d+:\s*(\S+)/m);
+    const wfId = headingMatch ? headingMatch[1].trim() : '';
+
+    // Collect all table rows (lines starting with |), skipping separator rows
+    const tableRows = blockLines.filter(l => l.trim().startsWith('|') && !l.includes('|---|---|'));
+
+    // Skip the header row: first | row has "字段" and "值"
+    // The remaining rows are field rows
+    const fieldRows = tableRows.slice(1); // remove header
+
+    // Check exactly 7 field rows
+    if (fieldRows.length !== 7) {
+      errors.push('SI-27: workflow "' + wfId + '" block has ' + fieldRows.length + '/7 field rows');
+      continue;
+    }
+
+    const fieldsInBlock = [];
+
+    for (const row of fieldRows) {
+      // Parse: | field_name | value |
+      // After split: ['', ' field_name ', ' value ', '']
+      const cells = row.split('|').map(c => c.trim());
+      // cells[1] = field name (may have backticks), cells[2] = value
+      const rawFieldName = cells[1] || '';
+      const fieldName = rawFieldName.replace(/`/g, '').trim();
+      const fieldValue = (cells[2] || '').trim();
+
+      if (!VALID_FIELDS.includes(fieldName)) {
+        errors.push('SI-27: workflow "' + wfId + '" has unknown field "' + fieldName + '"');
+      }
+      if (fieldValue.length === 0) {
+        errors.push('SI-27: workflow "' + wfId + '" field "' + fieldName + '" has empty value');
+      }
+      fieldsInBlock.push(fieldName);
+    }
+
+    // Check for duplicate fields within the block
+    const uniqueFields = [...new Set(fieldsInBlock)];
+    if (uniqueFields.length !== 7) {
+      const dupes = fieldsInBlock.filter(f => fieldsInBlock.indexOf(f) !== fieldsInBlock.lastIndexOf(f));
+      errors.push('SI-27: workflow "' + wfId + '" has duplicate fields: ' + dupes.join(', '));
+    }
+
+    // Check workflow_id is valid
+    if (wfId.length > 0 && !VALID_WF_IDS.includes(wfId)) {
+      errors.push('SI-27: workflow "' + wfId + '" is not a valid P0 workflow ID');
+    }
+
+    wfIdsFound.push(wfId);
+  }
+
+  // Check no duplicate workflow IDs
+  const uniqueIds = [...new Set(wfIdsFound)];
+  if (uniqueIds.length !== 12) {
+    const dupes = wfIdsFound.filter(id => wfIdsFound.indexOf(id) !== wfIdsFound.lastIndexOf(id));
+    errors.push('SI-27: duplicate workflow IDs found: ' + dupes.join(', '));
+  }
+
+  // Check all 12 IDs are present
+  for (const id of VALID_WF_IDS) {
+    if (!uniqueIds.includes(id)) {
+      errors.push('SI-27: workflow ID "' + id + '" missing from §3');
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-28: 6 Gate Result States — table-row parsing (WP-007-R1)
+ *
+ * Extracts §2 as a chapter-bounded section and parses its table.
+ * A valid §2 contains exactly 6 table data rows (one per gate state),
+ * each containing the backtick-delimited state identifier in the first column.
+ *
+ * PASSES when: exactly 6 table rows, each with a recognized state identifier.
+ * FAILS when: row count != 6, or any row lacks a valid state identifier.
+ */
+function checkSemanticInvariant28(baseDir) {
+  const ccPath = path.join(baseDir, 'ai-pm-os', 'references', 'command-and-approval-rules.md');
+  const ccContent = readSafe(ccPath) || '';
+  const errors = [];
+
+  const sec2Start = ccContent.indexOf('## 2.');
+  if (sec2Start < 0) {
+    errors.push('SI-28: §2 heading missing');
+    return errors;
+  }
+  const sec3Start = ccContent.indexOf('## 3.', sec2Start + 1);
+  const sec2 = ccContent.substring(sec2Start, sec3Start > 0 ? sec3Start : ccContent.length);
+
+  const lines = sec2.split('\n');
+  const tableRows = [];
+  for (const line of lines) {
+    const t = line.trim();
+    if (t.startsWith('|') && !t.startsWith('||')) tableRows.push(t);
+  }
+
+  // Skip header row AND separator rows (|---|)
+  const dataRows = tableRows.slice(1).filter(row => !row.includes('|---|'));
+  if (dataRows.length !== 6) {
+    errors.push('SI-28: §2 has ' + dataRows.length + '/6 table data rows');
+    return errors;
+  }
+
+  const VALID_STATES = [
+    'gate_passed', 'gate_failed', 'approval_required',
+    'blocked_by_conflict', 'blocked_by_dirty_worktree', 'unrouted_intent',
+  ];
+
+  const statesFound = [];
+  for (const row of dataRows) {
+    const cells = row.split('|').map(c => c.trim());
+    // cells[1] = first column (state identifier, may have backticks)
+    const rawStateId = cells[1] || '';
+    const stateId = rawStateId.replace(/`/g, '').trim();
+    if (VALID_STATES.includes(stateId)) {
+      statesFound.push(stateId);
+    } else if (stateId.length > 0) {
+      errors.push('SI-28: unknown state identifier "' + stateId + '" in §2 table');
+    }
+  }
+
+  const unique = [...new Set(statesFound)];
+  if (unique.length !== 6) {
+    const missing = VALID_STATES.filter(s => !unique.includes(s));
+    errors.push('SI-28: §2 missing states: ' + missing.join(', '));
+  }
+
+  return errors;
+}
+
+/**
+ * SI-29: Approval State Machine — §4.3 forbidden transition table parsing (WP-007-R1)
+ *
+ * Extracts §4.3 as a chapter-bounded section and parses its table.
+ * The table has 3 columns: | 源状态 | 目标状态 | 禁止原因 |
+ * Each data row must contain a backtick-quoted source state and a backtick-quoted target state.
+ * Requires at least 9 valid data rows (the 9 mandatory forbidden transitions).
+ *
+ * PASSES when: §4.3 has ≥9 valid data rows with valid source+target states.
+ * FAILS when: §4.3 has <9 rows, or a row lacks a valid source/target state pair.
+ */
+function checkSemanticInvariant29(baseDir) {
+  const ccPath = path.join(baseDir, 'ai-pm-os', 'references', 'command-and-approval-rules.md');
+  const ccContent = readSafe(ccPath) || '';
+  const errors = [];
+
+  const sec4Start = ccContent.indexOf('## 4.');
+  if (sec4Start < 0) {
+    errors.push('SI-29a: §4 heading missing');
+    return errors;
+  }
+  const sec5Start = ccContent.indexOf('## 5.', sec4Start + 1);
+  const sec4 = ccContent.substring(sec4Start, sec5Start > 0 ? sec5Start : ccContent.length);
+
+  const sec4_3Start = sec4.indexOf('### 4.3');
+  if (sec4_3Start < 0) {
+    errors.push('SI-29a: §4.3 heading missing');
+    return errors;
+  }
+  const sec4_4Start = sec4.indexOf('### 4.4', sec4_3Start + 1);
+  const sec4_3 = sec4.substring(sec4_3Start, sec4_4Start > 0 ? sec4_4Start : sec4.length);
+
+  const lines = sec4_3.split('\n');
+  const tableRows = [];
+  for (const line of lines) {
+    const t = line.trim();
+    if (t.startsWith('|') && !t.startsWith('||')) tableRows.push(t);
+  }
+
+  // Skip header row ("| 源状态 | 目标状态 | 禁止原因 |") and separator ("|---|---|---|")
+  const dataRows = tableRows.slice(1).filter(row => !row.includes('|---|'));
+
+  if (dataRows.length < 9) {
+    errors.push('SI-29b: §4.3 has ' + dataRows.length + '/≥9 forbidden transition rows');
+  }
+
+  let validRowCount = 0;
+  for (const row of dataRows) {
+    // Table format: | `SourceState` | `TargetState` | 禁止原因 |
+    // cells[1]=source, cells[2]=target, cells[3]=reason
+    const cells = row.split('|').map(c => c.trim());
+    const src = (cells[1] || '').trim();
+    const dst = (cells[2] || '').trim();
+
+    // A valid row: both src and dst are non-empty and start with backtick (backtick-quoted state)
+    if (src.length > 0 && src.startsWith('`') && dst.length > 0 && dst.startsWith('`')) {
+      validRowCount++;
+    } else if (src.length > 0 || dst.length > 0) {
+      errors.push('SI-29c: §4.3 malformed row: src=[' + src + '] dst=[' + dst + ']');
+    }
+  }
+
+  if (validRowCount < 9) {
+    errors.push('SI-29d: §4.3 has only ' + validRowCount + '/≥9 valid transition rows');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-30: Role/Permission Matrix — §5.1 + §5.2 table parsing (WP-007-R1)
+ *
+ * Parses §5.1 (role definition table) and verifies:
+ *   - At least 9 role data rows with role IDs in backtick-quoted form
+ * Parses §5.2 (permission matrix) and verifies:
+ *   - At least 10 data rows (operations with Y/- marks across role columns)
+ *   - Key operation names appear in the first column of data rows
+ *
+ * PASSES when: §5.1 has ≥9 role rows; §5.2 matrix has ≥10 data rows with key operations.
+ * FAILS when: role count < 9, or matrix is absent/empty.
+ */
+function checkSemanticInvariant30(baseDir) {
+  const ccPath = path.join(baseDir, 'ai-pm-os', 'references', 'command-and-approval-rules.md');
+  const ccContent = readSafe(ccPath) || '';
+  const errors = [];
+
+  const sec5Start = ccContent.indexOf('## 5.');
+  if (sec5Start < 0) {
+    errors.push('SI-30a: §5 heading missing');
+    return errors;
+  }
+  const sec6Start = ccContent.indexOf('## 6.', sec5Start + 1);
+  const sec5 = ccContent.substring(sec5Start, sec6Start > 0 ? sec6Start : ccContent.length);
+
+  // §5.1 — role definition table
+  const sec5_1Start = sec5.indexOf('### 5.1');
+  if (sec5_1Start < 0) {
+    errors.push('SI-30a: §5.1 heading missing');
+  } else {
+    const sec5_2Start = sec5.indexOf('### 5.2', sec5_1Start + 1);
+    const sec5_1 = sec5.substring(sec5_1Start, sec5_2Start > 0 ? sec5_2Start : sec5.length);
+    const lines = sec5_1.split('\n');
+    const tableRows = lines.filter(l => l.trim().startsWith('|') && !l.trim().startsWith('||'));
+    // Skip header + separator rows
+    const roleRows = tableRows.slice(1).filter(r => !r.includes('|---|'));
+
+    if (roleRows.length < 9) {
+      errors.push('SI-30b: §5.1 has ' + roleRows.length + '/≥9 role rows');
+    }
+
+    // Verify each role row has backtick-quoted role ID in first column
+    let validRoleCount = 0;
+    for (const row of roleRows) {
+      const cells = row.split('|').map(c => c.trim()).filter(c => c.length > 0);
+      if (cells.length >= 1 && cells[0].startsWith('`')) {
+        validRoleCount++;
+      }
+    }
+    if (validRoleCount < 9) {
+      errors.push('SI-30c: §5.1 has only ' + validRoleCount + '/≥9 valid role rows');
+    }
+  }
+
+  // §5.2 — permission matrix (rows have operation name in first cell, Y/- in role columns)
+  const sec5_2Start = sec5.indexOf('### 5.2');
+  if (sec5_2Start < 0) {
+    errors.push('SI-30d: §5.2 permission matrix heading missing');
+  } else {
+    const sec5_3Start = sec5.indexOf('### 5.3', sec5_2Start + 1);
+    const sec5_2 = sec5.substring(sec5_2Start, sec5_3Start > 0 ? sec5_3Start : sec5.length);
+    const lines = sec5_2.split('\n');
+    const tableRows = lines.filter(l => l.trim().startsWith('|') && !l.trim().startsWith('||'));
+    // Skip header row and separator rows
+    const matrixRows = tableRows.slice(1).filter(r => !r.includes('|---|'));
+
+    if (matrixRows.length < 10) {
+      errors.push('SI-30e: §5.2 permission matrix has ' + matrixRows.length + '/≥10 operation rows');
+    }
+
+    // Check key operations appear in the first column of data rows
+    // Support both English and Chinese terms
+    const KEY_OPS = [
+      { en: 'Scope Baseline', zh: 'Scope Baseline' },
+      { en: 'PU', zh: 'PU' },
+      { en: 'Sprint Commit', zh: 'Sprint Commit' },
+      { en: 'Human Acceptance', zh: 'Human Acceptance' },
+      { en: 'UAT Acceptance', zh: 'UAT Acceptance' },
+      { en: 'Change', zh: '变更' },
+    ];
+    const firstCells = matrixRows.map(r => {
+      const cells = r.split('|').map(c => c.trim()).filter(c => c.length > 0);
+      return cells[0] || '';
+    }).filter(c => c.length > 0);
+
+    for (const op of KEY_OPS) {
+      const found = firstCells.some(c => c.includes(op.en) || c.includes(op.zh));
+      if (!found) {
+        errors.push('SI-30f: §5.2 matrix missing key operation "' + op.en + '/' + op.zh + '" in first column');
+      }
+    }
+  }
+
+  // future_split support check
+  if (!/(?:future_split|未来拆分)/.test(sec5)) {
+    errors.push('SI-30g: §5 does not mention future_split support');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-31: COC Routing Integration — §7 table parsing (WP-007-R1)
+ *
+ * Parses §7.1 COC mapping table and verifies:
+ *   - Each data row has both workflow_id and contract_id
+ *   - All contract_ids belong to the 6 COC types
+ *   - All workflow_ids resolve to §3 workflow objects
+ *
+ * PASSES when: §7 table rows all have valid workflow_id + contract_id pairs,
+ *   all contract_ids are from the 6 COC types, and all workflow_ids
+ *   are defined in §3.
+ * FAILS when: any row lacks workflow_id or contract_id, contract_id not in
+ *   the 6 COC types, or workflow_id not in §3.
+ */
+function checkSemanticInvariant31(baseDir) {
+  const ccPath = path.join(baseDir, 'ai-pm-os', 'references', 'command-and-approval-rules.md');
+  const ccContent = readSafe(ccPath) || '';
+  const errors = [];
+
+  const sec7Start = ccContent.indexOf('## 7.');
+  if (sec7Start < 0) {
+    errors.push('SI-31a: §7 heading missing');
+    return errors;
+  }
+  const sec8Start = ccContent.indexOf('## 8.', sec7Start + 1);
+  const sec7 = ccContent.substring(sec7Start, sec8Start > 0 ? sec8Start : ccContent.length);
+
+  const lines = sec7.split('\n');
+  const tableRows = [];
+  for (const line of lines) {
+    const t = line.trim();
+    if (t.startsWith('|') && !t.startsWith('||')) tableRows.push(t);
+  }
+
+  const VALID_COC_IDS = [
+    'COC-CWP-001', 'COC-RWP-002', 'COC-PQR-003', 'COC-CAR-004', 'COC-PUA-005', 'COC-HAR-006',
+  ];
+
+  const VALID_WF_IDS = [
+    'INIT', 'INTAKE', 'MEETING', 'BRIEFING', 'TODO', 'APPLY',
+    'REPORT_DAILY', 'REPORT_WEEKLY', 'DASHBOARD_SYNC', 'TAKEOVER', 'AUDIT', 'AGILE',
+  ];
+
+  // Header row: | 意图关键词 | workflow_id | contract_id | — skip it
+  const dataRows = tableRows.slice(1).filter(row => !row.includes('|---|'));
+  if (dataRows.length < 6) {
+    errors.push('SI-31b: §7 has ' + dataRows.length + '/≥6 COC mapping rows');
+  }
+
+  let validRowCount = 0;
+  for (const row of dataRows) {
+    // cells after split('|') and trim: ['', '意图关键词', 'workflow_id', 'contract_id', '']
+    // cells[1]=intent, cells[2]=workflow_id, cells[3]=contract_id
+    const cells = row.split('|').map(c => c.trim());
+    const workflowId = (cells[2] || '').trim();
+    const contractId = (cells[3] || '').trim();
+
+    if (workflowId.length === 0) {
+      errors.push('SI-31c: §7 row missing workflow_id (contract_id=' + contractId + ')');
+    }
+    if (contractId.length === 0) {
+      errors.push('SI-31d: §7 row missing contract_id (workflow_id=' + workflowId + ')');
+    }
+
+    if (workflowId.length > 0 && contractId.length > 0) {
+      // Validate contract_id is one of the 6 COC types
+      const normalizedCid = contractId.replace(/\s/g, ''); // remove spaces
+      const isValidCOC = VALID_COC_IDS.some(c => normalizedCid.includes(c.replace(/-/g, '')));
+      if (!isValidCOC) {
+        // Also check raw form
+        const isRawValid = VALID_COC_IDS.includes(contractId);
+        if (!isRawValid) {
+          errors.push('SI-31e: §7 unknown contract_id "' + contractId + '"');
+        }
+      }
+
+      // Validate workflow_id: must be defined in §3
+      // OR be one of the slash-separated list (e.g., "INIT / APPLY")
+      const wfParts = workflowId.split(/\s*\/\s*/);
+      for (const wf of wfParts) {
+        const trimmed = wf.trim();
+        if (trimmed.length > 0 && !VALID_WF_IDS.includes(trimmed)) {
+          errors.push('SI-31f: §7 workflow_id "' + trimmed + '" not found in §3 workflow objects');
+        }
+      }
+
+      validRowCount++;
+    }
+  }
+
+  if (validRowCount < 6) {
+    errors.push('SI-31g: §7 has only ' + validRowCount + '/≥6 valid COC rows');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-32: Scenario Count — exactly 80 (WP-007)
+ *
+ * Delgate to checkScenarioHeadings which uses EXPECTED_SCENARIO_COUNT = 80.
+ * (SI-26 still exists but now validates 80 scenarios via the same heading check.)
+ * This is a thin wrapper for clarity; the actual work is done by SI-26 / checkScenarioHeadings.
+ */
+function checkSemanticInvariant32(baseDir) {
+  const errors = [];
+  const headingErrors = checkScenarioHeadings(baseDir);
+  if (headingErrors.length > 0) {
+    for (const e of headingErrors) { errors.push('SI-32: ' + e); }
+  }
+  return errors;
+}
+
 function main() {
   const baseDir = path.resolve(__dirname, '../..');
 
@@ -2811,7 +3288,13 @@ function main() {
   const si24 = checkSemanticInvariant24(baseDir);
   const si25 = checkSemanticInvariant25(baseDir);
   const si26 = checkSemanticInvariant26(baseDir);
-  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26);
+  const si27 = checkSemanticInvariant27(baseDir);
+  const si28 = checkSemanticInvariant28(baseDir);
+  const si29 = checkSemanticInvariant29(baseDir);
+  const si30 = checkSemanticInvariant30(baseDir);
+  const si31 = checkSemanticInvariant31(baseDir);
+  const si32 = checkSemanticInvariant32(baseDir);
+  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32);
   if (siErrors.length === 0) {
     console.log('  OK: SI-01 (framework auto-selection) PASS');
     console.log('  OK: SI-02 (atomic PU apply) PASS');
@@ -2838,7 +3321,13 @@ function main() {
     console.log('  OK: SI-23 (Naming Governance) PASS');
     console.log('  OK: SI-24 (Dirty Worktree Prohibited Actions) PASS');
     console.log('  OK: SI-25 (Markdown/JSON Authority Direction) PASS');
-    console.log('  OK: SI-26 (Scenario Count 70) PASS');
+    console.log('  OK: SI-26 (Scenario Count 70→80) PASS');
+    console.log('  OK: SI-27 (12 P0 Workflow Objects) PASS');
+    console.log('  OK: SI-28 (6 Gate Result States) PASS');
+    console.log('  OK: SI-29 (Approval State Machine) PASS');
+    console.log('  OK: SI-30 (Role/Permission Matrix) PASS');
+    console.log('  OK: SI-31 (COC Routing Integration) PASS');
+    console.log('  OK: SI-32 (Scenario Count 80) PASS');
   } else {
     for (const e of siErrors) {
       console.log('  SEMANTIC VIOLATION: ' + e);

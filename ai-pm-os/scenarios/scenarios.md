@@ -1289,3 +1289,149 @@
 - **Forbid**: 不得在无 Git 仓库时执行写入正式文件；不得自动执行 `git init`；
   不得跳过 preflight 检查。
 - **Evidence**: `PM_GAP_ANALYSIS.md`、`PM_INPUT_LOG.md`.
+
+## 71. 三层路由成功执行
+
+- **ID**: SC-CMD-01
+- **Framework**: PMO + command-and-approval-rules
+- **Given**: 用户说"生成今日 briefing"；Skill 已完成 Memory Boot；Active Context 存在且可读。
+- **When**: Skill 执行 Layer 1（Intent Classification）识别到 BRIEFING；Layer 2（Workflow Selection）选中 WF-04 BRIEFING 并确认 required_reads；Layer 3（Gate Evaluation）所有 preflight_gates 通过。
+- **Then**:
+  1. Layer 3 输出 `gate_passed`；
+  2. Skill 进入 writes_started，生成 briefing 文件（Draft 状态）；
+  3. Active Context 记录三层输出结果。
+- **Allow**: 生成 Draft Briefing；更新 Active Context。
+- **Forbid**: Layer 3 未通过时不得写入；不得跳过 Layer 1/2 直接进入 Layer 3。
+- **Evidence**: Active Context 日志、`PM_CURRENT_STATUS.md`。
+
+## 72. unrouted intent 失败关闭
+
+- **ID**: SC-CMD-02
+- **Framework**: PMO
+- **Given**: 用户说"随便处理一下这个文件"；Skill 无法从 router.md §1 路由表中匹配任何关键词。
+- **When**: Layer 1 无法将意图映射到已知工作流。
+- **Then**:
+  1. 输出 `Gap：unrouted intent`；
+  2. 提供三选项：重新表述、从 §1 指定、PM AI 评估；
+  3. 停止执行，不自行猜测。
+- **Allow**: 输出 Gap；停止执行。
+- **Forbid**: 自行选择一个工作流继续；输出 accepted/complete/done。
+- **Evidence**: Skill 输出日志。
+
+## 73. 多意图拆分与停止
+
+- **ID**: SC-CMD-03
+- **Framework**: PMO + PMP/PMBOK
+- **Given**: 用户说"先 briefing，然后生成今日 To-do"。
+- **When**: Layer 1 识别出两个意图（BRIEFING 和 TODO）；按依赖排序先执行 BRIEFING。
+- **Then**:
+  1. 执行 BRIEFING（子意图 1）；
+  2. BRIEFING 失败时停止，不执行 TODO（子意图 2）；
+  3. 输出汇总说明 BRIEFING 失败原因。
+- **Allow**: 执行成功子意图；停止失败后子意图。
+- **Forbid**: 跳过失败子意图继续后续；输出 accepted/complete。
+- **Evidence**: Active Context 执行日志。
+
+## 74. Scope Baseline 未批准时 INIT 阻断
+
+- **ID**: SC-CMD-04
+- **Framework**: PMO + Hybrid
+- **Given**: 当前项目无 Scope Baseline 文件；用户调用 `/ai-pm-os 初始化项目`。
+- **When**: INIT 工作流 preflight 检查发现无 Scope Baseline；Gate 输出 `gate_failed`。
+- **Then**:
+  1. 输出 `Escalation: gate-failed`；
+  2. 列出缺失前置：Scope Baseline 不存在；
+  3. 建议创建 Project Brief（Draft）作为第一步；
+  4. 不得直接生成 Approved Scope Baseline。
+- **Allow**: 建议创建 Draft Project Brief。
+- **Forbid**: 直接生成 Approved Scope Baseline；跳过 preflight。
+- **Evidence**: Skill 输出日志、`PM_GAP_ANALYSIS.md`。
+
+## 75. PU 审批缺失阻断 APPLY
+
+- **ID**: SC-CMD-05
+- **Framework**: PMO + PMP/PMBOK
+- **Given**: `PM_PENDING_UPDATES.md` 中存在一条 Proposed PU（PU-XXX）；用户要求 Skill "直接把这个更新落地"。
+- **When**: APPLY 工作流检测到 PU 状态为 Proposed（未批准）；Gate 输出 `approval_required`。
+- **Then**:
+  1. 输出 `Escalation: approval-required`；
+  2. 列出需要 Human Owner 批准；
+  3. 不得写入正式文件；
+  4. 等待 Human Owner 审批。
+- **Allow**: 输出审批请求；记录到 PM_PENDING_UPDATES.md。
+- **Forbid**: 跳过审批直接写入 Approved Baseline；直接标记为 Applied。
+- **Evidence**: `PM_PENDING_UPDATES.md`、`PM_APPROVAL_STATUS.md`。
+
+## 76. 角色权限不足阻断变更批准
+
+- **ID**: SC-CMD-06
+- **Framework**: PMO
+- **Given**: 用户提出 Scope Baseline 变更（重大变更，跨基线）；Skill 当前默认角色配置中无 Sponsor Approver 签署。
+- **When**: 变更涉及跨基线写入，需要 Sponsor Approver + Human Owner 双签；当前角色配置缺少 Sponsor Approver。
+- **Then**:
+  1. 输出 `Escalation: role-insufficient`；
+  2. 列出所需角色：Sponsor Approver + Human Owner；
+  3. 不得跳过角色权限执行变更；
+  4. 提示更新 `PM_ROLE_CONFIG.md`。
+- **Allow**: 输出 Gap；记录变更请求到 PM_PENDING_UPDATES.md。
+- **Forbid**: 未经授权角色批准写入 Approved Baseline；跳过角色检查。
+- **Evidence**: `PM_ROLE_CONFIG.md`、`PM_PENDING_UPDATES.md`。
+
+## 77. COC 路由缺失 contract_id 失败关闭
+
+- **ID**: SC-CMD-07
+- **Framework**: PMO + runtime-compliance-contracts
+- **Given**: 用户提出变更 Scope Baseline；Skill 识别为 APPLY 工作流并命中 COC-CAR-004。
+- **When**: Layer 2 返回了 `workflow_id = APPLY` 但未返回 `contract_id`；Layer 3 Pre-send Compliance Gate 检测到缺少 contract_id。
+- **Then**:
+  1. Gate 返回 `Escalation: coc-missing-workflow-or-contract`；
+  2. 阻断关键输出发送；
+  3. 不得输出 `issued` / `accepted` / `complete`。
+- **Allow**: 输出 Escalation；停止发送。
+- **Forbid**: 缺少 contract_id 时发送关键输出；绕过 Pre-send Gate。
+- **Evidence**: Skill 输出日志、Active Context。
+
+## 78. 脏工作树阻断 APPLY
+
+- **ID**: SC-CMD-08
+- **Framework**: PMO + command-and-approval-rules
+- **Given**: Git 工作树存在未提交变更（dirty）；用户要求应用已批准的 PU。
+- **When**: APPLY 工作流检测到 Git dirty 且操作涉及跨基线写入；Gate 输出 `blocked_by_dirty_worktree`。
+- **Then**:
+  1. 输出 `Escalation: blocked-by-dirty-worktree`；
+  2. 进入 `preflight_blocked` 状态；
+  3. 提示用户先 `git add` + `git commit` 或 checkpoint；
+  4. 不得在脏工作树时执行跨基线写入。
+- **Allow**: 提示用户清理工作树；记录阻塞状态。
+- **Forbid**: 在脏工作树时执行写入；自动执行 `git stash`/`git reset`。
+- **Evidence**: Git 状态、`PM_GAP_ANALYSIS.md`。
+
+## 79. 审批状态非法转换：Rejected → Applied 禁止
+
+- **ID**: SC-CMD-09
+- **Framework**: PMO + command-and-approval-rules
+- **Given**: `PM_PENDING_UPDATES.md` 中 PU-XXX 状态为 Rejected；用户要求"重新应用这个更新"。
+- **When**: APPLY 工作流尝试将 Rejected PU 标记为 Applied；审批状态机检测到禁止的转换（Rejected → Applied）。
+- **Then**:
+  1. 输出 `Escalation: illegal-state-transition`；
+  2. 列出禁止的转换：Rejected → Applied；
+  3. 列出允许的替代：Rejected → Proposed（重新起草）或 Superseded；
+  4. 不得将 Rejected PU 标记为 Applied。
+- **Allow**: 建议重新起草（Rejected → Proposed）；记录禁止尝试。
+- **Forbid**: Rejected → Applied 转换；跳过状态机检查。
+- **Evidence**: `PM_PENDING_UPDATES.md`、Skill 输出日志。
+
+## 80. 个人默认角色配置：单人模式通过
+
+- **ID**: SC-CMD-10
+- **Framework**: PMO + command-and-approval-rules
+- **Given**: 用户是唯一人员；`PM_ROLE_CONFIG.md` 配置单人模式：Human Owner + PM Owner + PM Reviewer + Sponsor Approver 由同一人承担。
+- **When**: Skill 执行初始化（INIT）并验证角色配置；角色配置支持未来拆分（未写死)。
+- **Then**:
+  1. 接受单人角色配置作为当前有效配置；
+  2. 所有审批路径均指向同一人；
+  3. 角色配置文件中保留可拆分字段（future_split_supported = true）；
+  4. INIT 成功生成 Project Brief（Draft）。
+- **Allow**: 单人角色配置通过 preflight；保留未来拆分能力。
+- **Forbid**: 将单人配置写死为永久状态；移除 future_split_supported 字段。
+- **Evidence**: `PM_ROLE_CONFIG.md`、`07_DATA/project_roles.json`.

@@ -356,3 +356,4 @@ Markdown（权威）→ JSON（同步层）
 7. Markdown → JSON 恢复方向检查（§5）
 8. 五类后置条件门控检查（§6）
 9. SI-EI-01~05 不变量检查（§8）
+10. 前置门禁结果状态与状态机映射（WP-007：command-and-approval-rules.md §2~§8）

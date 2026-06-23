@@ -3,6 +3,20 @@
 `ai-pm-os` 在识别用户意图时，必须按本表选择工作流；不识别时进入
 `Gap：unrouted intent` 而不自行猜测。
 
+## 0. 路由架构概述
+
+路由执行分三层（详见 `references/command-and-approval-rules.md` §1）：
+
+| 层 | 名称 | 输入 | 输出 |
+|---|---|---|---|
+| Layer 1 | Intent Classification | 用户原始消息 | 候选工作流 ID 集合 |
+| Layer 2 | Workflow Selection | Layer 1 候选 + Active Context | 精确 workflow_id + required_reads + preflight_gates |
+| Layer 3 | Gate Evaluation | Layer 2 输出 + required_reads | Gate 结果状态（gate_passed / gate_failed / approval_required / blocked_by_conflict / blocked_by_dirty_worktree / unrouted_intent）|
+
+Gate 结果状态定义见 `command-and-approval-rules.md` §2。
+12 个 P0 工作流完整对象定义见 `command-and-approval-rules.md` §3。
+审批状态机与角色矩阵见 `command-and-approval-rules.md` §4~§5。
+
 ## 1. 路由表
 
 | 意图关键词（中文 / 英文） | 工作流 | 主框架 | 必读 |
@@ -28,6 +42,7 @@
 
 | 工作流 | 强制前置 |
 |---|
+| REPORT_DAILY / REPORT_WEEKLY | 期间内有已批准 Action / Decision / Meeting Minutes |
 | INIT | Scope Baseline 不存在或为 Draft；Active WBS 标记"无工作包" |
 | INTAKE / MEETING | Input Log / Meeting Index 文件存在且可写 |
 | APPLY | 至少 1 条 Proposed PU；Git 工作树允许创建 checkpoint（dirty 但非冲突） |
@@ -135,11 +150,11 @@ Skill **只有**在以下实质歧义时才请求业务澄清：
 | 意图关键词 | 工作流 | 契约 ID |
 |---|---|---|
 | 签发 / 下发 / 派发 工作包 | INIT / APPLY | COC-CWP-001 |
-| 返工 / reissue / rework / R1 | REWORK | COC-RWP-002 |
+| 返工 / reissue / rework / R1 | APPLY | COC-RWP-002 |
 | QC / 验收 / 评审 / 抽检 | AUDIT | COC-PQR-003 |
 | 变更 / 改 Scope / 改 Baseline | APPLY | COC-CAR-004 |
 | 批准 / apply PU | APPLY | COC-PUA-005 |
-| Human 验收 / Human 签收 | APPROVAL | COC-HAR-006 |
+| Human 验收 / Human 签收 | AUDIT | COC-HAR-006 |
 
 ### §8.2 强制 Pre-send Compliance Gate
 
@@ -152,3 +167,12 @@ Skill **只有**在以下实质歧义时才请求业务澄清：
 ### §8.4 短指针授权边界
 
 `one-click-copy` = `完整正文单代码块`；`path-only` 仅在 Human Owner 当前消息显式要求短指针时允许。`简洁` / `赶快` / `一键复制` 均不构成 path-only 授权。
+
+### §8.5 双字段返回约束（COC 集成，WP-007 / REQ-035）
+
+命中 COC 时，Layer 2 必须同时返回：
+- `workflow_id`（工作流标识符）
+- `contract_id`（契约标识符，如 `COC-CWP-001`、`COC-PUA-005`）
+
+缺少任一字段时，Layer 3 必须在 Pre-send Compliance Gate 返回 `Escalation: coc-missing-workflow-or-contract`。
+此约束由 `command-and-approval-rules.md` §7 强制定义。

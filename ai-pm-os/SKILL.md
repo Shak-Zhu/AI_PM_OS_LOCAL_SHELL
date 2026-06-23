@@ -96,12 +96,12 @@ target_agents: [Cursor, Codex]
 | 今日 Briefing | BRIEFING | PMO + PMP/PMBOK |
 | 生成 To-do | TODO | PMP/PMBOK |
 | 应用 Pending Updates | APPLY | PMO + PMP/PMBOK |
-| 生成日报 / 周报 / 月报 | REPORT | PMO + PMP/PMBOK |
+| 日报 | REPORT_DAILY | PMO + PMP/PMBOK |
+| 周报 | REPORT_WEEKLY | PMO + PMP/PMBOK + APM |
 | 接管已有项目 | TAKEOVER | PMO + APM |
 | 审计项目 | AUDIT | PMO + APM |
 | 估算建议 | ESTIMATION | PMP/PMBOK + APM |
 | 缺口识别 | GAP | PMO + APM |
-| 会议建议 | MEETING_ADVISORY | PMO + PRINCE2 |
 | 会议建议 | MEETING_ADVISORY | PMO + PRINCE2 |
 | 敏捷治理 | AGILE | Scrum / Kanban / Hybrid（自动选择）|
 | 刷新 Dashboard | DASHBOARD_SYNC | Hybrid |
@@ -212,6 +212,18 @@ target_agents: [Cursor, Codex]
 - 错误成功状态：不得在缺字段、缺渠道或授权不明时输出 `issued` / `accepted` / `complete` / `done` / `finished`。
 - 上下文压缩后必须重新读取契约来源；不得依赖聊天记忆替代正式规则。
 - 验证器 `SI-14` 机器检查契约和门禁；任一不通过即退出非 0。
+
+### 6c. 前置门禁与审批状态机（WP-007 / REQ-005、REQ-006、REQ-009）
+
+完整定义见 `references/command-and-approval-rules.md`：
+
+- **三层路由**：Intent Classification → Workflow Selection → Gate Evaluation。
+- **6 个 Gate 结果状态**：gate_passed、gate_failed、approval_required、blocked_by_conflict、blocked_by_dirty_worktree、unrouted_intent。
+- **9 个审批状态**：Draft、Proposed、Pending Review、Approved、Rejected、Superseded、Applied、Human Accepted、Parked。
+- **9 类角色**：PM Owner、Human Owner、PM Reviewer、Sponsor Approver、Product Owner、Tech Owner、Business Owner、Agile Owner、UAT Owner。
+- **12 个 P0 工作流**：INIT、INTAKE、MEETING、BRIEFING、TODO、APPLY、REPORT_DAILY、REPORT_WEEKLY、DASHBOARD_SYNC、TAKEOVER、AUDIT、AGILE。
+- **个人默认角色**：单人用户默认承担 PM Owner、Human Owner、PM Reviewer、Sponsor Approver；规则支持未来拆分。
+- **Fail-Closed**：跳过审批/前置门/直接写 Approved Baseline/直接进入 Sprint 均阻断。
 
 ## 7. 行为场景
 
