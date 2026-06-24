@@ -29,7 +29,7 @@ const path = require('path');
 // WP-007: Extended to 80 (added 10 command/routing scenarios SC-CMD-01..10).
 // WP-009: Extended to 102 (added 12 communication/reporting scenarios SC-RP-01..12).
 // WP-010: Extended to 112 (added 10 agile data model scenarios SC-AGDM-01..10).
-const EXPECTED_SCENARIO_COUNT = 112;
+const EXPECTED_SCENARIO_COUNT = 122;
 
 // Required files inside the ai-pm-os/ package
 const REQUIRED_FILES = [
@@ -49,6 +49,7 @@ const REQUIRED_FILES = [
   'ai-pm-os/references/project-workflow-rules.md',
   'ai-pm-os/references/communication-and-reporting-rules.md',
   'ai-pm-os/references/agile-data-model-rules.md',
+  'ai-pm-os/references/agile-reporting-rules.md',
   'ai-pm-os/scenarios/scenarios.md',
 ];
 const REQUIRED_CAPABILITY_TAGS = [
@@ -4376,8 +4377,8 @@ function checkSemanticInvariant56(baseDir) {
     if (m) headingNums.push(parseInt(m[1], 10));
   }
 
-  if (headingNums.length !== 112) {
-    errors.push('SI-56: found ' + headingNums.length + '/112 scenario headings');
+  if (headingNums.length !== EXPECTED_SCENARIO_COUNT) {
+    errors.push('SI-56: found ' + headingNums.length + '/' + EXPECTED_SCENARIO_COUNT + ' scenario headings');
   }
 
   // Check SC-AGDM-01 through SC-AGDM-10
@@ -4541,6 +4542,490 @@ function checkSemanticInvariant58(baseDir) {
 }
 
 
+
+
+/**
+ * SI-59: agile-reporting-rules.md is covered by REQUIRED_FILES
+ *
+ * The new agile-reporting-rules.md must be registered in the validator's
+ * REQUIRED_FILES array. File existence alone does NOT satisfy this SI.
+ * Phase 1 (checkRequiredFiles) already verifies file presence.
+ * SI-59 additionally proves REQUIRED_FILES coverage by inspecting the source.
+ */
+function checkSemanticInvariant59(baseDir) {
+  var errors = [];
+  var validatorPath = path.join(baseDir, 'ai-pm-os/scripts/validate-skill.js');
+  if (!fs.existsSync(validatorPath)) {
+    errors.push('SI-59: validate-skill.js not found');
+    return errors;
+  }
+  var fileSrc = fs.readFileSync(validatorPath, 'utf8');
+  var rfStart = fileSrc.indexOf('const REQUIRED_FILES = [');
+  var rfEnd = fileSrc.indexOf('];', rfStart);
+  if (rfStart < 0 || rfEnd < 0) {
+    errors.push('SI-59: REQUIRED_FILES array not found');
+    return errors;
+  }
+  var rfBlock = fileSrc.slice(rfStart, rfEnd + 2);
+  var rfLines = rfBlock.split('\n');
+  var found = false;
+  for (var i = 0; i < rfLines.length; i++) {
+    if (rfLines[i].indexOf("'ai-pm-os/references/agile-reporting-rules.md'") !== -1) {
+      found = true; break;
+    }
+  }
+  if (!found) {
+    errors.push('SI-59: agile-reporting-rules.md NOT in REQUIRED_FILES — file could be deleted without triggering Phase 1');
+  }
+  return errors;
+}
+
+
+/**
+ * SI-60: 8 P0 agile reporting metrics exist with structured section identification
+ *
+ * Locate ## §3. 8 类 P0 敏捷报告指标.
+ * Within that section, parse metric subsection headings (### 指标 N: <Name>).
+ * Verify exactly 8 metrics with no duplicates.
+ *
+ * Required: Sprint Status, Sprint Goal Health, Backlog Readiness,
+ *   Planned vs Completed Story Points, Burndown Remaining Points,
+ *   Velocity Actual vs Planned, Blocked Items Aging, Carry-over Items
+ */
+function checkSemanticInvariant60(baseDir) {
+  var errors = [];
+  var rulesPath = path.join(baseDir, 'ai-pm-os/references/agile-reporting-rules.md');
+  if (!fs.existsSync(rulesPath)) {
+    errors.push('SI-60: agile-reporting-rules.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(rulesPath, 'utf8');
+
+  // Split by lines, find §3 heading, then §4 heading
+  var lines = content.split('\n');
+  var inSec3 = false;
+  var sec3Start = -1;
+  var sec3End = -1;
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i].indexOf('## §3') !== -1 && lines[i].indexOf('8 类 P0') !== -1) { inSec3 = true; sec3Start = i; }
+    else if (inSec3 && lines[i].indexOf('## §4') !== -1) { sec3End = i; break; }
+  }
+  if (sec3Start < 0) {
+    errors.push('SI-60: section ## §3. not found');
+    return errors;
+  }
+  if (sec3End < 0) sec3End = lines.length;
+  var boundedSec3 = lines.slice(sec3Start, sec3End).join('\n');
+
+  var metricHeadings = [];
+  for (var j = 0; j < lines.length; j++) {
+    var l = lines[j];
+    if (j >= sec3Start && j < sec3End) {
+      var m = l.match(/### 指标\s+(\d+)\s*[：:：]\s*(.+)/);
+      if (m) metricHeadings.push({ num: parseInt(m[1], 10), name: m[2].trim() });
+    }
+  }
+
+  if (metricHeadings.length !== 8) {
+    errors.push('SI-60: found ' + metricHeadings.length + '/8 metric headings in §3 — ' + metricHeadings.map(function(x){return x.num + ':' + x.name;}).join(' | '));
+  }
+
+  var seenNums = {};
+  for (var ni = 0; ni < metricHeadings.length; ni++) {
+    if (seenNums[metricHeadings[ni].num]) {
+      errors.push('SI-60: duplicate metric number ' + metricHeadings[ni].num + ' in §3');
+    }
+    seenNums[metricHeadings[ni].num] = true;
+  }
+
+  var requiredKeywords = ['sprint status', 'sprint goal health', 'backlog readiness',
+    'planned vs completed', 'burndown', 'velocity', 'blocked items', 'carry-over'];
+  for (var ki = 0; ki < requiredKeywords.length; ki++) {
+    var kw = requiredKeywords[ki];
+    var found = metricHeadings.some(function(h) {
+      return h.name.toLowerCase().indexOf(kw.toLowerCase()) !== -1;
+    });
+    if (!found) {
+      errors.push('SI-60: expected metric containing "' + kw + '" not found in §3');
+    }
+  }
+
+  return errors;
+}
+
+
+/**
+ * SI-61: Daily / Weekly / Monthly / Steering report agile content rules exist
+ *
+ * Locate §4 (日报), §5 (周报/月报), §6 (管理层报告) by heading.
+ * Each section must contain data-source, key-output, and Gap/fail-closed keywords.
+ * This prevents passing on section-heading-only presence.
+ */
+function checkSemanticInvariant61(baseDir) {
+  var errors = [];
+  var rulesPath = path.join(baseDir, 'ai-pm-os/references/agile-reporting-rules.md');
+  if (!fs.existsSync(rulesPath)) {
+    errors.push('SI-61: agile-reporting-rules.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(rulesPath, 'utf8');
+  var lines = content.split('\n');
+
+  var sections = [
+    { id: '§4', name: 'Daily Report (日报)', patterns: { src: /数据|读取|source|来源/i, out: /输出|报告|内容|指标/i, gap: /Gap|缺失|禁止/i } },
+    { id: '§5', name: 'Weekly/Monthly Report (周报/月报)', patterns: { src: /敏捷|必须|内容|报告/i, out: /Sprint|完成|报告|目标|内容/i, gap: /Gap|缺失|禁止/i } },
+    { id: '§6', name: 'Steering Report (管理层报告)', patterns: { src: /指标|摘要|升级|风险|关键|Sponsor/i, out: /指标|摘要|升级|风险|关键/i, gap: /Gap|缺失|禁止|升级|关注|决策|建议/i } },
+  ];
+
+  for (var si = 0; si < sections.length; si++) {
+    var sec = sections[si];
+    var secStart = -1, secEnd = -1;
+    for (var j = 0; j < lines.length; j++) {
+      if (lines[j].indexOf('## ' + sec.id + '.') !== -1) secStart = j;
+      else if (secStart >= 0 && lines[j].match(/^## §[789]/)) { secEnd = j; break; }
+    }
+    if (secStart < 0) {
+      errors.push('SI-61: section ## ' + sec.id + ' (' + sec.name + ') not found');
+      continue;
+    }
+    if (secEnd < 0) secEnd = lines.length;
+    var secContent = lines.slice(secStart, secEnd).join('\n');
+    if (!sec.patterns.src.test(secContent)) errors.push('SI-61: ' + sec.id + ' (' + sec.name + ') — data-source keyword missing');
+    if (!sec.patterns.out.test(secContent)) errors.push('SI-61: ' + sec.id + ' (' + sec.name + ') — key-output keyword missing');
+    if (!sec.patterns.gap.test(secContent)) errors.push('SI-61: ' + sec.id + ' (' + sec.name + ') — Gap/fail-closed keyword missing');
+  }
+
+  return errors;
+}
+
+
+/**
+ * SI-62: Burndown contract 9 fields exist within the Burndown contract table
+ *
+ * Locate the Burndown contract table in the §3 指标 5 section.
+ * Parse table data rows to extract field names (first cell of each row).
+ * Verify exactly 9 fields with no duplicates and no unknown extras.
+ *
+ * Required: sprint_id, date, planned_remaining_points, actual_remaining_points,
+ *   completed_points, scope_added_points, scope_removed_points, blocked_points, source
+ */
+function checkSemanticInvariant62(baseDir) {
+  var errors = [];
+  var rulesPath = path.join(baseDir, 'ai-pm-os/references/agile-reporting-rules.md');
+  if (!fs.existsSync(rulesPath)) {
+    errors.push('SI-62: agile-reporting-rules.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(rulesPath, 'utf8');
+  var lines = content.split('\n');
+
+  // Find 指标 5 section, bounded by 指标 6
+  var bdStart = -1, bdEnd = -1;
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i].indexOf('### 指标 5') !== -1 || lines[i].indexOf('指标 5：Burndown') !== -1) bdStart = i;
+    else if (bdStart >= 0 && (lines[i].indexOf('### 指标 6') !== -1 || lines[i].indexOf('指标 6：Velocity') !== -1)) { bdEnd = i; break; }
+  }
+  if (bdStart < 0) {
+    errors.push('SI-62: Burndown section (指标 5) not found');
+    return errors;
+  }
+  if (bdEnd < 0) bdEnd = lines.length;
+
+  // Find first Markdown table in this section
+  var inTable = false;
+  var tableLines = [];
+  for (var j = bdStart; j < bdEnd; j++) {
+    var l = lines[j];
+    if (l.trim().charAt(0) === '|') {
+      inTable = true;
+      tableLines.push(l);
+    } else if (inTable && l.trim() === '') {
+      break;
+    } else if (inTable && l.trim().charAt(0) !== '|') {
+      break;
+    }
+  }
+
+  if (tableLines.length === 0) {
+    errors.push('SI-62: Burndown contract table not found');
+    return errors;
+  }
+
+  // Parse field names from data rows (skip header + separator rows)
+  var dataRows = tableLines.slice(2);
+  var fieldNames = [];
+  for (var ti = 0; ti < dataRows.length; ti++) {
+    var tline = dataRows[ti].trim();
+    if (tline.charAt(0) === '|') {
+      var cells = tline.split('|').map(function(c){return c.trim();}).filter(function(c){return c.length > 0;});
+      if (cells.length > 0) fieldNames.push(cells[0].replace(/`+/g, ''));
+    }
+  }
+
+  var expected = ['sprint_id', 'date', 'planned_remaining_points', 'actual_remaining_points',
+    'completed_points', 'scope_added_points', 'scope_removed_points', 'blocked_points', 'source'];
+
+  if (fieldNames.length !== 9) {
+    errors.push('SI-62: Burndown table has ' + fieldNames.length + '/9 fields — ' + fieldNames.join(', '));
+  }
+  var dupF = fieldNames.filter(function(f,i){return fieldNames.indexOf(f) !== i;});
+  if (dupF.length > 0) {
+    errors.push('SI-62: Burndown table duplicate fields: ' + dupF.join(', '));
+  }
+  for (var fi = 0; fi < fieldNames.length; fi++) {
+    if (expected.indexOf(fieldNames[fi]) === -1) {
+      errors.push('SI-62: Burndown table unknown field "' + fieldNames[fi] + '"');
+    }
+  }
+  for (var ei = 0; ei < expected.length; ei++) {
+    if (fieldNames.indexOf(expected[ei]) === -1) {
+      errors.push('SI-62: Burndown table missing required field "' + expected[ei] + '"');
+    }
+  }
+
+  return errors;
+}
+
+
+/**
+ * SI-63: Velocity contract 8 fields exist within the Velocity contract table
+ *
+ * Locate the Velocity contract table in the §3 指标 6 section.
+ * Parse table data rows to extract field names.
+ * Verify exactly 8 fields with no duplicates and no unknown extras.
+ *
+ * Required: sprint_id, planned_points, completed_points, accepted_points,
+ *   carry_over_points, velocity_variance, variance_reason, source
+ */
+function checkSemanticInvariant63(baseDir) {
+  var errors = [];
+  var rulesPath = path.join(baseDir, 'ai-pm-os/references/agile-reporting-rules.md');
+  if (!fs.existsSync(rulesPath)) {
+    errors.push('SI-63: agile-reporting-rules.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(rulesPath, 'utf8');
+  var lines = content.split('\n');
+
+  // Find 指标 6 section, bounded by 指标 7
+  var vlStart = -1, vlEnd = -1;
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i].indexOf('### 指标 6') !== -1 || lines[i].indexOf('指标 6：Velocity') !== -1) vlStart = i;
+    else if (vlStart >= 0 && (lines[i].indexOf('### 指标 7') !== -1 || lines[i].indexOf('指标 7：Blocked') !== -1)) { vlEnd = i; break; }
+  }
+  if (vlStart < 0) {
+    errors.push('SI-63: Velocity section (指标 6) not found');
+    return errors;
+  }
+  if (vlEnd < 0) vlEnd = lines.length;
+
+  // Find first Markdown table in this section
+  var inTable = false;
+  var tableLines = [];
+  for (var j = vlStart; j < vlEnd; j++) {
+    var l = lines[j];
+    if (l.trim().charAt(0) === '|') {
+      inTable = true;
+      tableLines.push(l);
+    } else if (inTable && l.trim() === '') {
+      break;
+    } else if (inTable && l.trim().charAt(0) !== '|') {
+      break;
+    }
+  }
+
+  if (tableLines.length === 0) {
+    errors.push('SI-63: Velocity contract table not found');
+    return errors;
+  }
+
+  var dataRows = tableLines.slice(2);
+  var fieldNames = [];
+  for (var ti = 0; ti < dataRows.length; ti++) {
+    var tline = dataRows[ti].trim();
+    if (tline.charAt(0) === '|') {
+      var cells = tline.split('|').map(function(c){return c.trim();}).filter(function(c){return c.length > 0;});
+      if (cells.length > 0) fieldNames.push(cells[0].replace(/`+/g, ''));
+    }
+  }
+
+  var expected = ['sprint_id', 'planned_points', 'completed_points', 'accepted_points',
+    'carry_over_points', 'velocity_variance', 'variance_reason', 'source'];
+
+  if (fieldNames.length !== 8) {
+    errors.push('SI-63: Velocity table has ' + fieldNames.length + '/8 fields — ' + fieldNames.join(', '));
+  }
+  var dupF = fieldNames.filter(function(f,i){return fieldNames.indexOf(f) !== i;});
+  if (dupF.length > 0) {
+    errors.push('SI-63: Velocity table duplicate fields: ' + dupF.join(', '));
+  }
+  for (var fi = 0; fi < fieldNames.length; fi++) {
+    if (expected.indexOf(fieldNames[fi]) === -1) {
+      errors.push('SI-63: Velocity table unknown field "' + fieldNames[fi] + '"');
+    }
+  }
+  for (var ei = 0; ei < expected.length; ei++) {
+    if (fieldNames.indexOf(expected[ei]) === -1) {
+      errors.push('SI-63: Velocity table missing required field "' + expected[ei] + '"');
+    }
+  }
+
+  return errors;
+}
+
+
+/**
+ * SI-64: Scope conflict check rules are within §7 (not scattered across the document)
+ *
+ * Locate ## §7. Scope 冲突检查规则 and bound all checks to that section.
+ * All required elements must appear within §7 (not just anywhere in the document).
+ *
+ * Required: conflict identification, 3 conflict types, Conflict output, Gap output,
+ *   Pending Update suggestion, prohibition on auto-removing stories
+ */
+function checkSemanticInvariant64(baseDir) {
+  var errors = [];
+  var rulesPath = path.join(baseDir, 'ai-pm-os/references/agile-reporting-rules.md');
+  if (!fs.existsSync(rulesPath)) {
+    errors.push('SI-64: agile-reporting-rules.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(rulesPath, 'utf8');
+  var lines = content.split('\n');
+
+  var sec7Start = -1, sec7End = -1;
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i].indexOf('## §7.') !== -1) sec7Start = i;
+    else if (sec7Start >= 0 && lines[i].match(/^## §[89]/)) { sec7End = i; break; }
+  }
+  if (sec7Start < 0) {
+    errors.push('SI-64: section ## §7. not found');
+    return errors;
+  }
+  if (sec7End < 0) sec7End = lines.length;
+  var sec7 = lines.slice(sec7Start, sec7End).join('\n');
+
+  var checks = [
+    { name: 'Conflict identification rules', pattern: /冲突.*识别|识别.*冲突|conflict.*identif/i },
+    { name: 'unapproved-story-committed conflict type', pattern: /unapproved-story-committed/i },
+    { name: 'backlog-scope-mismatch conflict type', pattern: /backlog-scope-mismatch/i },
+    { name: 'sprint-scope-change conflict type', pattern: /sprint-scope-change/i },
+    { name: 'Conflict output format', pattern: /Conflict:\s*\[/i },
+    { name: 'Gap output requirement', pattern: /Gap:\s*scope-conflict/i },
+    { name: 'Pending Update suggestion', pattern: /Pending Update|PU.*建议|建议.*PU/i },
+    { name: 'auto-remove prohibition', pattern: /禁止.*自动.*移除|不得.*自动.*移除/i },
+  ];
+
+  for (var ci = 0; ci < checks.length; ci++) {
+    if (!checks[ci].pattern.test(sec7)) {
+      errors.push('SI-64: "' + checks[ci].name + '" not found in §7');
+    }
+  }
+  return errors;
+}
+
+
+/**
+ * SI-65: Report fail-closed rules are within §8 with correct semantic direction
+ *
+ * Locate ## §8. 报告 Fail-Closed 规则 and bound all checks to that section.
+ * Must contain Gap output, prohibition rules, and MUST NOT contain permissive
+ * language that allows claiming "trend normal" when data is missing.
+ */
+function checkSemanticInvariant65(baseDir) {
+  var errors = [];
+  var rulesPath = path.join(baseDir, 'ai-pm-os/references/agile-reporting-rules.md');
+  if (!fs.existsSync(rulesPath)) {
+    errors.push('SI-65: agile-reporting-rules.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(rulesPath, 'utf8');
+  var lines = content.split('\n');
+
+  var sec8Start = -1, sec8End = -1;
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i].indexOf('## §8.') !== -1) sec8Start = i;
+    else if (sec8Start >= 0 && lines[i].match(/^## §9/)) { sec8End = i; break; }
+  }
+  if (sec8Start < 0) {
+    errors.push('SI-65: section ## §8. not found');
+    return errors;
+  }
+  if (sec8End < 0) sec8End = lines.length;
+  var sec8 = lines.slice(sec8Start, sec8End).join('\n');
+
+  var checks = [
+    { name: 'fail-closed section', pattern: /fail-closed|Fail-Closed|失败关闭/i },
+    { name: 'Gap output requirement', pattern: /Gap:\s*\[.*?\]-no-data/i },
+    { name: 'prohibition on "trend normal"', pattern: /禁止.*趋势正常|趋势正常.*禁止/i },
+    { name: 'prohibition on "no risk"', pattern: /禁止.*无风险|无风险.*禁止/i },
+    { name: 'prohibition on estimating from history', pattern: /禁止.*历史.*估算|不得.*假设.*估算/i },
+    { name: 'prohibition on done/done/done states', pattern: /禁止.*done|done.*禁止|禁止.*finished|finished.*禁止/i },
+  ];
+
+  for (var ci = 0; ci < checks.length; ci++) {
+    if (!checks[ci].pattern.test(sec8)) {
+      errors.push('SI-65: "' + checks[ci].name + '" not found in §8');
+    }
+  }
+
+  // Reverse-semantic detection
+  var reversePatterns = [
+    { name: 'allows "trend normal" for missing data', pattern: /趋势正常.*允许|允许.*趋势正常/i },
+    { name: 'allows "no risk" for missing data', pattern: /无风险.*允许|允许.*无风险/i },
+    { name: 'allows "all is well" for missing data', pattern: /一切顺利.*允许|允许.*一切顺利/i },
+  ];
+  for (var ri = 0; ri < reversePatterns.length; ri++) {
+    if (reversePatterns[ri].pattern.test(sec8)) {
+      errors.push('SI-65: REVERSE SEMANTIC in §8 — "' + reversePatterns[ri].name + '"');
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * SI-67: SC-AGR-06 Allow/Forbid semantic correctness
+ *
+ * Scenario ## 118 (SC-AGR-06) must NOT contain a Allow/Forbid contradiction:
+ * - Allow may say "未发现 Scope 冲突" (allowed after evidence-backed check)
+ * - Forbid MUST say "未执行 Scope 冲突检查时声称" or "未执行检查时声称" (forbidden before check)
+ * - Forbid MUST NOT say "未发现冲突时输出" or similar that makes it seem
+ *   "no conflict found" is always forbidden, even after a proper check.
+ * The contradiction occurs when Forbid uses "未发现冲突时输出" while Allow uses "未发现冲突".
+ */
+function checkSemanticInvariant67(baseDir) {
+  var errors = [];
+  var scenariosPath = path.join(baseDir, 'ai-pm-os/scenarios/scenarios.md');
+  if (!fs.existsSync(scenariosPath)) {
+    errors.push('SI-67: scenarios.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(scenariosPath, 'utf8');
+  var lines = content.split('\n');
+
+  // Find ## 118 section
+  var in118 = false;
+  var allowLine = null, forbidLine = null;
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i].indexOf('## 118.') !== -1) in118 = true;
+    else if (in118 && lines[i].indexOf('## 119.') !== -1) break;
+    if (in118) {
+      if (lines[i].indexOf('- **Allow**:') !== -1 && lines[i].indexOf('未发现') !== -1) allowLine = lines[i];
+      if (lines[i].indexOf('- **Forbid**:') !== -1 && lines[i].indexOf('未') !== -1) forbidLine = lines[i];
+    }
+  }
+
+  if (allowLine && forbidLine) {
+    // FORBID is contradictory if it says "未发现冲突时" without "未执行"
+    var hasCheckGuard = /未执行/.test(forbidLine);
+    var hasNoConflictClaim = /未发现冲突时|未发现.*冲突时|无.*冲突.*时/.test(forbidLine);
+    if (!hasCheckGuard && hasNoConflictClaim) {
+      errors.push('SI-67: SC-AGR-06 Forbid has contradictory "no conflict" claim — Forbid must use "未执行 Scope 冲突检查时声称" not "未发现冲突时"');
+    }
+  }
+  return errors;
+}
 
 function main() {
   const baseDir = path.resolve(__dirname, '../..');
@@ -4747,7 +5232,15 @@ function main() {
   const si56 = checkSemanticInvariant56(baseDir);
   const si57 = checkSemanticInvariant57(baseDir);
   const si58 = checkSemanticInvariant58(baseDir);
-  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32, ...si33, ...si34, ...si35, ...si36, ...si37, ...si38, ...si39, ...si40, ...si41, ...si42, ...si43, ...si44, ...si45, ...si46, ...si47, ...si48, ...si49, ...si50, ...si51, ...si52, ...si53, ...si54, ...si55, ...si56, ...si57, ...si58);
+  const si59 = checkSemanticInvariant59(baseDir);
+  const si60 = checkSemanticInvariant60(baseDir);
+  const si61 = checkSemanticInvariant61(baseDir);
+  const si62 = checkSemanticInvariant62(baseDir);
+  const si63 = checkSemanticInvariant63(baseDir);
+  const si64 = checkSemanticInvariant64(baseDir);
+  const si65 = checkSemanticInvariant65(baseDir);
+  const si67 = checkSemanticInvariant67(baseDir);
+  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32, ...si33, ...si34, ...si35, ...si36, ...si37, ...si38, ...si39, ...si40, ...si41, ...si42, ...si43, ...si44, ...si45, ...si46, ...si47, ...si48, ...si49, ...si50, ...si51, ...si52, ...si53, ...si54, ...si55, ...si56, ...si57, ...si58, ...si59, ...si60, ...si61, ...si62, ...si63, ...si64, ...si65, ...si67);
   if (siErrors.length === 0) {
     console.log('  OK: SI-01 (framework auto-selection) PASS');
     console.log('  OK: SI-02 (atomic PU apply) PASS');
@@ -4807,6 +5300,14 @@ function main() {
     console.log('  OK: SI-56 (Scenario Count 112 + SC-AGDM-01~10) PASS');
     console.log('  OK: SI-57 (Dashboard Route DASHBOARD_SYNC) PASS');
     console.log('  OK: SI-58 (Markdown Table Column Consistency) PASS');
+    console.log('  OK: SI-59 (agile-reporting-rules.md REQUIRED_FILES coverage) PASS');
+    console.log('  OK: SI-60 (8 P0 Metrics §3 structured parsing) PASS');
+    console.log('  OK: SI-61 (Daily/Weekly/Steering §4/§5/§6 bounded checks) PASS');
+    console.log('  OK: SI-62 (Burndown 9-field table-bounded contract) PASS');
+    console.log('  OK: SI-63 (Velocity 8-field table-bounded contract) PASS');
+    console.log('  OK: SI-64 (Scope Conflict §7-bounded + Gap/PU rules) PASS');
+    console.log('  OK: SI-65 (Fail-Closed §8-bounded + reverse-semantic detection) PASS');
+    console.log('  OK: SI-67 (SC-AGR-06 Allow/Forbid semantic correctness) PASS');
   } else {
     for (const e of siErrors) {
       console.log('  SEMANTIC VIOLATION: ' + e);

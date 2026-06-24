@@ -1920,3 +1920,160 @@
 - **Allow**: Gap 标注；字段补充建议；Markdown 权威优先。
 - **Forbid**: 字段缺失时跳过同步；JSON 覆盖 Markdown 权威源；同步后 Story 字段与 JSON 不一致。
 - **Evidence**: Markdown 条目内容；JSON 输出内容；一致性检查结果。
+
+## 113. AGILE REPORTING P0：Sprint Status 日报敏捷内容
+
+- **ID**: SC-AGR-01
+- **Framework**: agile-reporting-rules
+- **Given**: AGILE 工作流中，PM 需要生成日报（REPORT_DAILY），当前有活跃 Sprint（active_sprint）存在。
+- **When**: 日报生成时，需要体现 Sprint 状态敏捷内容。
+- **Then**:
+  1. 读取当前 Sprint ID、目标、开始日期、计划结束日期；
+  2. 计算 Sprint 进度：completed_SP / committed_SP 百分比；
+  3. 评估 Sprint Goal Health（Green >= 70%；Amber 50~69%；Red < 50%）；
+  4. 若数据缺失，输出 Gap: sprint-no-data，禁止输出"趋势正常"或"无风险"。
+- **Allow**: Gap 标注；Amber/Red 升级建议；无活跃 Sprint 时跳过 Sprint 敏捷内容。
+- **Forbid**: 无 Sprint 数据时输出"趋势正常"；跳过 Sprint Goal Health 评估；编造 completed_SP 数据。
+- **Evidence**: Sprint ID；sprint_goal；completed_SP / committed_SP；Sprint Goal Health 评估结果。
+
+## 114. AGILE REPORTING P0：Burndown 契约 9 字段完整性
+
+- **ID**: SC-AGR-02
+- **Framework**: agile-reporting-rules
+- **Given**: AGILE 工作流中，PM 需要在报告中引用 Burndown 数据。
+- **When**: 读取 02_AGILE/PM_BURNDOWN_DATA.md 或 07_DATA/burndown.json 时。
+- **Then**:
+  1. 验证 Burndown 数据包含全部 9 个字段：sprint_id、date、planned_remaining_points、actual_remaining_points、completed_points、scope_added_points、scope_removed_points、blocked_points、source；
+  2. 若字段缺失，输出 Gap: burndown-field-[field]-missing；
+  3. 若 actual_remaining_points > planned_remaining_points 且差距 > 20%，输出 Amber: burndown-behind。
+- **Allow**: Gap 标注；Amber/Red 指标；无 Burndown 数据时跳过 Burndown 部分。
+- **Forbid**: 缺少任何 Burndown 契约字段时输出"Burndown 正常"；编造 Burndown 数据。
+- **Evidence**: Burndown 字段存在性检查结果；Gap 内容；Burndown 指标评估。
+
+## 115. AGILE REPORTING P0：Velocity 契约 8 字段完整性
+
+- **ID**: SC-AGR-03
+- **Framework**: agile-reporting-rules
+- **Given**: AGILE 工作流中，PM 需要在报告中引用 Velocity 数据。
+- **When**: 读取 02_AGILE/PM_VELOCITY_LOG.md 或 07_DATA/velocity.json 时。
+- **Then**:
+  1. 验证 Velocity 数据包含全部 8 个字段：sprint_id、planned_points、completed_points、accepted_points、carry_over_points、velocity_variance、variance_reason、source；
+  2. 若字段缺失，输出 Gap: velocity-field-[field]-missing；
+  3. 若 velocity_variance < 0 且 |variance| > 20%，输出 Amber: velocity-below-plan。
+- **Allow**: Gap 标注；Amber/Red 指标；历史 Velocity 平均计算；无 Velocity 数据时跳过。
+- **Forbid**: 缺少 Velocity 字段时输出"Velocity 符合预期"；编造 velocity_variance。
+- **Evidence**: Velocity 字段存在性检查结果；variance_reason；Velocity 指标评估。
+
+## 116. AGILE REPORTING P0：Blocked Items Aging 检查与升级
+
+- **ID**: SC-AGR-04
+- **Framework**: agile-reporting-rules
+- **Given**: AGILE 工作流中，PM 需要在日报中报告 Blocked Story 状态。
+- **When**: 读取 02_AGILE/PM_DAILY_STANDUP_LOG.md 或 07_DATA/burndown.json（blocked_points）时。
+- **Then**:
+  1. 列出所有 status = Open 的 Blocked Story，含 blk_id、story_id、blocked_date、aging；
+  2. 若 aging > 1 工作日，输出 Amber: blocked-aging；
+  3. 若 aging > 2 工作日，输出 Red: blocked-critical + 升级建议；
+  4. 标注 Blocked Story 的 SP 不计入 Velocity。
+- **Allow**: 无 Blocked 项时跳过；Amber/Red 升级建议；建议 Tech Owner 介入。
+- **Forbid**: Blocked 项超过 2 工作日不输出 Red 指标；编造 blocked_date。
+- **Evidence**: Blocked Story 列表；aging 计算结果；升级建议内容。
+
+## 117. AGILE REPORTING P0：Carry-over Items and Reason Codes
+
+- **ID**: SC-AGR-05
+- **Framework**: agile-reporting-rules
+- **Given**: AGILE 工作流中，PM 需要报告跨 Sprint Carry-over 的 Story。
+- **When**: 读取 02_AGILE/PM_SPRINT_BACKLOG.md（Carry-over）或 07_DATA/backlog.json 时。
+- **Then**:
+  1. 列出所有 Carry-over Story，含 co_id、story_id、source_sprint、target_sprint、carry_reason、po_confirmed；
+  2. 若 carry_reason 缺失，输出 Gap: carry-over-reason-missing；
+  3. 若 po_confirmed = false，输出 Gap: carry-over-unconfirmed；
+  4. 若 po_confirmed = false，阻止 Carry-over Story 进入下一 Sprint committed。
+- **Allow**: Gap 标注；Carry-over 确认建议；无 Carry-over 时跳过。
+- **Forbid**: 无 PO 确认的 Carry-over 进入下一 Sprint；无 carry_reason 时跳过；静默滚动。
+- **Evidence**: Carry-over Story 列表；carry_reason；po_confirmed 状态；Gap 内容。
+
+## 118. AGILE REPORTING P0：Scope 冲突检查与 Gap 输出
+
+- **ID**: SC-AGR-06
+- **Framework**: agile-reporting-rules
+- **Given**: AGILE 工作流中，PM 需要在周报/月报中执行 Scope 冲突检查。
+- **When**: 检查 committed Sprint 中的 Story 是否与 Approved Scope Baseline 一致时。
+- **Then**:
+  1. 验证每个 committed Story 有关联的 requirement_id 或 approved PU 标记；
+  2. 验证 Story 的 Backlog 父条目 status 非 Draft/Proposed；
+  3. 若发现无 requirement_id 且无 PO 确认的 committed Story，输出 Conflict: unapproved-story-committed；
+  4. 若发现 Backlog 条目与 Approved Scope 不一致，输出 Conflict: backlog-scope-mismatch；
+  5. 每个冲突建议进入 PM_GAP_ANALYSIS.md 并生成 PU；
+  6. 禁止自动将 Story 从 committed Sprint 移除。
+- **Allow**: Gap 标注；Conflict 输出；PU 建议；无冲突时报告"未发现 Scope 冲突"。
+- **Forbid**: 检测到冲突后自动移除 Story；跳过 Scope 冲突检查；未执行 Scope 冲突检查时声称"无 Scope 冲突"或"未发现冲突"
+- **Evidence**: 冲突 Story 列表；Conflict 内容；Gap 内容；PU 建议。
+
+## 119. AGILE REPORTING P0：日报敏捷内容完整性
+
+- **ID**: SC-AGR-07
+- **Framework**: agile-reporting-rules
+- **Given**: AGILE 工作流中，PM 生成日报（REPORT_DAILY），当前有活跃 Sprint。
+- **When**: 日报需要包含敏捷内容时。
+- **Then**:
+  1. 包含当前 Sprint 状态（§4.1）：Sprint ID、目标、进度、Sprint Goal Health；
+  2. 包含今日 Sprint 相关 Action（§4.2）：完成的 Story/任务、Blocked 项、Carry-over；
+  3. 若存在 Blocked Story，报告 aging（§4.3）；
+  4. 若存在 Carry-over Story，报告 po_confirmed 和 carry_reason（§4.4）；
+  5. 若上述数据缺失，输出 Gap: [data-source]-no-data；
+  6. 禁止将"无数据"写成"趋势正常"或"无风险"。
+- **Allow**: Gap 标注；Amber/Red 指标；无活跃 Sprint 时简化为 Backlog 状态。
+- **Forbid**: 缺失 Sprint 数据时输出"一切顺利"；缺失 Burndown 数据时输出"Burndown 正常"。
+- **Evidence**: Sprint 状态内容；Blocked aging 内容；Carry-over 内容；Gap 内容。
+
+## 120. AGILE REPORTING P0：周报/月报敏捷内容完整性
+
+- **ID**: SC-AGR-08
+- **Framework**: agile-reporting-rules
+- **Given**: AGILE 工作流中，PM 生成周报（REPORT_WEEKLY）或月报（REPORT_MONTHLY）。
+- **When**: 报告需要包含敏捷专项内容时。
+- **Then**:
+  1. 包含 Sprint 目标完成情况（§5.1）：完成率、Sprint Goal Health、关键结论；
+  2. 包含 Backlog 变化（§5.2）：新增/完成/移除条目数、Ready 占比；
+  3. 包含 Burndown 趋势摘要（§5.3）：曲线描述、scope_added/removed 趋势；
+  4. 包含 Velocity 趋势摘要（§5.4）：本 Sprint Velocity vs 历史平均；
+  5. 包含 Scope 冲突和未批准 Story 统计（§5.5）：冲突数量、违规 Story 数量；
+  6. 若数据缺失，输出相应 Gap。
+- **Allow**: Gap 标注；RAG 指标；无敏捷数据时简化为"本周无 Sprint 活动"。
+- **Forbid**: 缺失 Velocity 数据时输出"Velocity 符合预期"；跳过 Scope 冲突检查。
+- **Evidence**: Sprint 完成情况；Burndown 趋势；Velocity 趋势；Scope 冲突统计。
+
+## 121. AGILE REPORTING P0：管理层报告敏捷内容完整性
+
+- **ID**: SC-AGR-09
+- **Framework**: agile-reporting-rules
+- **Given**: AGILE 工作流中，PM 生成管理层报告（REPORT_STEERING），Sponsor Approver 需要敏捷视角。
+- **When**: 管理层报告需要包含敏捷专项内容时。
+- **Then**:
+  1. 包含 RAG 指标摘要（§6.1）：Sprint Goal Health、Velocity vs Plan、Burndown、Blocked Aging；
+  2. 包含 Sprint Health（§6.2）：进展摘要、关键风险、Amber/Red 升级建议；
+  3. 包含 Scope Conflict Count（§6.3）：冲突总数、Sponsor 需关注事项；
+  4. 包含 Blocked/Carry-over Summary（§6.4）：当前总数、aging 分布、未确认数量；
+  5. 若存在 Amber/Red 指标，附升级建议；
+  6. 若存在未确认 Carry-over，请求 Sponsor Approver 确认。
+- **Allow**: RAG 指标；Sponsor 升级事项；无敏捷数据时简化为"当前无活跃 Sprint"。
+- **Forbid**: 缺失 Sprint 数据时输出"一切正常"；跳过 Scope 冲突检查。
+- **Evidence**: RAG 指标表；Scope Conflict Count；升级建议内容。
+
+## 122. AGILE REPORTING P0：报告 Fail-Closed 与禁止编造
+
+- **ID**: SC-AGR-10
+- **Framework**: agile-reporting-rules
+- **Given**: AGILE 工作流中，PM 生成日报/周报/月报/管理层报告，数据源不可用或为空。
+- **When**: 报告生成时，指定的敏捷数据源（Burndown、Velocity、Sprint 等）不存在或为空。
+- **Then**:
+  1. 输出 Gap: [data-source]-no-data；
+  2. 禁止将"无数据"描述为"趋势正常"、"无风险"、"一切顺利"、"Velocity 符合预期"、"Sprint 目标可达"、"无 Scope 冲突"；
+  3. 禁止基于假设或历史平均值估算当前数据；
+  4. 禁止输出 accepted、complete、done、finished 等暗示完成的状态；
+  5. 当 Markdown 源和 JSON 数据不一致时，以 Markdown 为准，输出 Conflict: markdown-json-mismatch。
+- **Allow**: Gap 标注；Conflict 标注；数据不可用时简化为"无敏捷数据可用"。
+- **Forbid**: 编造数据；推断趋势；将"无数据"描述为正面状态；自动修正 JSON。
+- **Evidence**: Gap 内容；Conflict 内容；禁止输出内容检查结果。

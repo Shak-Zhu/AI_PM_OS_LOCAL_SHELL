@@ -110,7 +110,7 @@ target_agents: [Cursor, Codex]
 
 八类框架（PMBOK、PRINCE2、APM、PMO、Scrum、Kanban、Hybrid、Agile Delivery）的
 适用 / 不适用 / 组合 / 输出规则见 `references/framework-matrix.md`。
-敏捷专业行为规则见 `references/agile-delivery-rules.md`。
+敏捷专业行为规则见 `references/agile-delivery-rules.md`。敏捷报告与指标规则见 `references/agile-reporting-rules.md`。
 任何输出必须显式声明所用的框架组合；不得用"按最佳实践"代替。
 
 ## 5. 失败与升级
@@ -229,7 +229,7 @@ target_agents: [Cursor, Codex]
 
 ## 7. 行为场景
 
-≥112 个 Given / When / Then 行为场景见 `scenarios/scenarios.md`，覆盖：
+≥122 个 Given / When / Then 行为场景见 `scenarios/scenarios.md`，覆盖：
 
 - 4 个专业框架组合（PMBOK / PRINCE2 / APM / PMO / Scrum / Kanban / Hybrid）
 - 4 个审批与权限（PU 绕过、Approved Baseline 覆盖、Sprint / Scope 冲突、Owner 缺失）
@@ -244,7 +244,7 @@ target_agents: [Cursor, Codex]
 - 12 个沟通报告场景（SC-RP-01~12，BRIEFING/MEETING/TODO/报告）
 - 10 个敏捷数据模型场景（SC-AGDM-01~10）
 
-合计 112 个场景。
+合计 122 个场景。
 
 敏捷数据模型契约（DoR/DoD/Story Point/Backlog/Sprint 等）详见 `references/agile-data-model-rules.md`。
 

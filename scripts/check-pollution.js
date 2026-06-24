@@ -20,10 +20,35 @@ const path = require('path');
 
 // --- Configuration ---
 
-// Pollution patterns to detect in PRODUCT files only.
-// The script itself, _DEV_PROJECT_CONTROL/, and .git/ are skipped
-// before this array is used for content scanning.
-const POLLUTION_PATTERNS = [
+/**
+ * Strict pollution patterns for product shell MEMORY templates (00_PM_MEMORY/).
+ * These files are generic copyable project-start templates and must not contain
+ * concrete project facts (WP IDs, dates, review statuses).
+ * Placeholders like WP-###, YYYY-MM-DD, INITIALIZE_PROJECT are allowed.
+ */
+const STRICT_PATTERNS = [
+  // Concrete WP IDs (not placeholder WP-###)
+  { pattern: /\bWP-0[0-9]{2}(?:-R[0-9]+)?\b/, label: 'Concrete WP/Rework ID [STRICT]' },
+  // Concrete date stamps (not placeholder YYYY-MM-DD)
+  { pattern: /\b2026-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])\b/, label: 'Concrete date stamp [STRICT]' },
+  // Development governance review/execution status in product shell templates.
+  // These specific statuses indicate a concrete project execution state (not template schema).
+  // We match specific phase/decision words but EXCLUDE:
+  //   - "Pending Review" (legitimate document schema status)
+  //   - "PM Review" / "Human Owner" / "Human Accepted" (role names)
+  //   - "Rejected" (only if standalone, not part of "unrejected")
+  // Match: implemented/Human Accepted/QC Review/Rework/Closed/Issued/HumanRejected
+  { pattern: /\b(?:implemented|Human\s+Accepted|QC\s+Review|Rework|Issued|Closed)\b/i, label: 'Governance status in product shell [STRICT]' },
+];
+
+/**
+ * General pollution patterns for all OTHER product files (ai-pm-os/, 01_PM_DOCUMENTS/,
+ * 02_AGILE/, 03_MEETINGS/, etc.). These are NOT shell templates — they are
+ * governance product files that legitimately contain governance IDs as part of
+ * their content (e.g., scenarios referencing WP-001, or references mentioning
+ * APR-001). We only flag machine-specific and absolute-path pollution here.
+ */
+const GENERAL_PATTERNS = [
   // Project-specific date stamp
   { pattern: /2026-06-18/, label: 'Date: 2026-06-18' },
   // Approval IDs
@@ -61,7 +86,7 @@ const POLLUTION_PATTERNS = [
   { pattern: /IN-20260618/, label: 'ID: IN-20260618' },
   // Action IDs
   { pattern: /ACT-001/, label: 'ID: ACT-001' },
-  // Risk IDs (require word boundary to avoid matching inside COC-PQR-###)
+  // Risk IDs
   { pattern: /\bR-001\b/, label: 'ID: R-001' },
   { pattern: /\bR-002\b/, label: 'ID: R-002' },
   { pattern: /\bR-003\b/, label: 'ID: R-003' },
@@ -92,10 +117,6 @@ const POLLUTION_PATTERNS = [
 ];
 
 // Directories to skip entirely (no scanning inside these).
-// NOTE: ai-pm-os/ is NOT skipped — it is scanned like any other product directory.
-// Pollution patterns (PU-001..PU-005, CHG-001..CHG-003, etc.) must be handled
-// by using placeholders (PU-###, CHG-###, etc.) in scenario text, NOT by skipping
-// the entire directory.
 const SKIP_DIRS = [
   '.git',
   'node_modules',
@@ -111,33 +132,33 @@ const SCAN_EXTENSIONS = new Set([
 
 // Files that are explicitly allowed (do not report as pollution)
 const ALLOWED_FILES = [
-  'README.md',  // Product name "AI PM OS Local Shell" is legitimate
+  'README.md',
 ];
 
 // --- Utility Functions ---
 
-/**
- * Check if a path component should be skipped (belong to a skipped directory).
- * Works with both Windows (\) and Unix (/) path separators.
- */
 function shouldSkipDir(entryName) {
   return SKIP_DIRS.includes(entryName);
 }
 
-/**
- * Check if a file should be scanned based on extension.
- */
 function shouldScanFile(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   return SCAN_EXTENSIONS.has(ext);
 }
 
-/**
- * Check if a file is explicitly allowed (not pollution even if matched).
- */
 function isAllowedFile(filePath) {
   const fileName = path.basename(filePath);
   return ALLOWED_FILES.includes(fileName);
+}
+
+/**
+ * Returns true if the file is under the product shell memory templates directory.
+ * On Windows, path separators can be / or \, so we check for both.
+ */
+function isPMMemoryFile(relativePath) {
+  return relativePath.startsWith('00_PM_MEMORY' + path.sep) ||
+         relativePath.startsWith('00_PM_MEMORY/') ||
+         relativePath.startsWith('00_PM_MEMORY\\');
 }
 
 /**
@@ -164,7 +185,6 @@ function collectFiles(dir, baseDir) {
       if (!shouldSkipDir(entry.name)) {
         results.push(...collectFiles(fullPath, baseDir));
       }
-      // else: skip .git, node_modules, scripts, _DEV_PROJECT_CONTROL
     } else if (shouldScanFile(entry.name)) {
       results.push({ fullPath, relativePath });
     }
@@ -230,20 +250,29 @@ function main() {
       continue;
     }
     filesScanned++;
-    const findings = scanFile(fullPath, POLLUTION_PATTERNS);
+
+    let findings = [];
+    if (isPMMemoryFile(relativePath)) {
+      // Phase 1a: Strict check for product shell memory templates only
+      findings = scanFile(fullPath, STRICT_PATTERNS);
+    } else {
+      // Phase 1b: General check for all other product files
+      findings = scanFile(fullPath, GENERAL_PATTERNS);
+    }
+
     if (findings.length > 0) {
       totalFindings += findings.length;
       console.log('');
-      console.log(`  FOUND in: ${relativePath}`);
+      console.log('  FOUND in: ' + relativePath);
       for (const f of findings) {
-        console.log(`    - ${f.pattern}`);
+        console.log('    - ' + f.pattern);
       }
     }
   }
 
   console.log('');
-  console.log(`Files scanned: ${filesScanned}`);
-  console.log(`Files skipped (allowed): ${filesSkipped}`);
+  console.log('Files scanned: ' + filesScanned);
+  console.log('Files skipped (allowed): ' + filesSkipped);
 
   // Phase 2: JSON validation
   console.log('');
@@ -261,15 +290,14 @@ function main() {
     const relPath = path.relative(baseDir, jsonFile);
     const result = validateJsonFile(jsonFile);
     if (result.ok) {
-      console.log(`  OK: ${relPath}`);
+      console.log('  OK: ' + relPath);
     } else {
       jsonErrors++;
-      console.log(`  ERROR: ${relPath} - ${result.error}`);
+      console.log('  ERROR: ' + relPath + ' - ' + result.error);
     }
   }
 
   // Phase 3: Check for forbidden files in product root
-  // (files that should have been deleted from the product repo)
   console.log('');
   console.log('[Phase 3] Checking for forbidden product files...');
   const forbiddenFiles = [
@@ -282,7 +310,7 @@ function main() {
     const checkPath = path.join(baseDir, name);
     if (fs.existsSync(checkPath)) {
       forbiddenFound++;
-      console.log(`  FORBIDDEN: ${name} still exists at product root`);
+      console.log('  FORBIDDEN: ' + name + ' still exists at product root');
     }
   }
   if (forbiddenFound === 0) {
@@ -293,16 +321,16 @@ function main() {
   console.log('');
   console.log('[Phase 4] Skipped directories:');
   for (const dir of SKIP_DIRS) {
-    console.log(`  - ${dir}/`);
+    console.log('  - ' + dir + '/');
   }
 
   // Summary
   console.log('');
   console.log('=== Summary ===');
-  console.log(`Pollution pattern hits (product files): ${totalFindings}`);
-  console.log(`JSON validation errors: ${jsonErrors}`);
-  console.log(`Forbidden files found: ${forbiddenFound}`);
-  console.log(`Allowed files skipped: ${allowedFilesHit}`);
+  console.log('Pollution pattern hits (product files): ' + totalFindings);
+  console.log('JSON validation errors: ' + jsonErrors);
+  console.log('Forbidden files found: ' + forbiddenFound);
+  console.log('Allowed files skipped: ' + allowedFilesHit);
   console.log('');
 
   if (totalFindings === 0 && jsonErrors === 0 && forbiddenFound === 0) {
