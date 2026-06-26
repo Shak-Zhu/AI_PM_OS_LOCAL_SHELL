@@ -120,6 +120,7 @@ const GENERAL_PATTERNS = [
 const SKIP_DIRS = [
   '.git',
   'node_modules',
+  'dist',
   'scripts',
   '_DEV_PROJECT_CONTROL',
 ];
@@ -135,10 +136,46 @@ const ALLOWED_FILES = [
   'README.md',
 ];
 
+// Line-level allowlist for specific false-positive findings.
+// Maps: relative file path -> array of { patternLabel, linePattern }
+// If a finding matches the patternLabel AND the triggering line matches linePattern,
+// the finding is suppressed.
+// This is NOT a directory-level skip — it is a precise per-line exception.
+const ALLOWED_FILE_LINES = [
+  {
+    file: 'ai-pm-os/scripts/validate-skill.js',
+    entries: [
+      {
+        patternLabel: 'macOS absolute path: /Users/...',
+        // Line 88 in validate-skill.js: `  /\/Users\/[^\/\s]+/,` — this is a regex
+        // literal defining a path pattern, not a concrete absolute path.
+        // The comment `// Unix /Users/ home directory` on line 87 also contains /Users/
+        // but is clearly a pattern description, not an actual path.
+        // Allow both the pattern definition line and the comment.
+        linePrefixes: ['  //Users//', '  // Unix /Users/'],
+      },
+    ],
+  },
+];
+
 // --- Utility Functions ---
 
-function shouldSkipDir(entryName) {
-  return SKIP_DIRS.includes(entryName);
+function shouldSkipDir(relativePath) {
+  // node_modules and dist must be skipped at ALL levels (third-party deps / build output).
+  // scripts is skipped ONLY at the root level (product governance scripts).
+  // _DEV_PROJECT_CONTROL is skipped at all levels.
+  const parts = relativePath.split(path.sep);
+  const dirName = parts[parts.length - 1];
+  const atRoot = (parts.length === 1);
+
+  if (atRoot) {
+    return SKIP_DIRS.includes(dirName);
+  }
+
+  // Non-root: only skip node_modules, dist, _DEV_PROJECT_CONTROL
+  if (dirName === 'node_modules' || dirName === 'dist') return true;
+  if (dirName === '_DEV_PROJECT_CONTROL') return true;
+  return false;
 }
 
 function shouldScanFile(filePath) {
@@ -182,7 +219,7 @@ function collectFiles(dir, baseDir) {
     const relativePath = path.relative(baseDir, fullPath);
 
     if (entry.isDirectory()) {
-      if (!shouldSkipDir(entry.name)) {
+      if (!shouldSkipDir(relativePath)) {
         results.push(...collectFiles(fullPath, baseDir));
       }
     } else if (shouldScanFile(entry.name)) {
@@ -193,15 +230,53 @@ function collectFiles(dir, baseDir) {
 }
 
 /**
+ * Check if a specific finding on a specific line should be suppressed by the
+ * ALLOWED_FILE_LINES allowlist.
+ */
+function isAllowedLineFinding(filePath, patternLabel, lineContent) {
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  for (const entry of ALLOWED_FILE_LINES) {
+    if (normalizedPath.endsWith(entry.file)) {
+      for (const ae of entry.entries) {
+        if (ae.patternLabel === patternLabel) {
+          for (const prefix of ae.linePrefixes) {
+            if (lineContent.startsWith(prefix)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Scan a single file for pollution patterns.
  * Returns array of { pattern: label, file: path }.
+ * Applies ALLOWED_FILE_LINES for line-level false-positive suppression.
+ * Scans LINE BY LINE to prevent cross-line regex matches from bypassing the allowlist.
  */
 function scanFile(filePath, patterns) {
   const findings = [];
   try {
     const content = fs.readFileSync(filePath, 'utf8');
+    const lines = content.split('\n');
     for (const { pattern, label } of patterns) {
-      if (pattern.test(content)) {
+      let lineHit = false;
+      for (let i = 0; i < lines.length; i++) {
+        const lineContent = lines[i];
+        if (pattern.test(lineContent)) {
+          // Pattern matched on this specific line
+          if (isAllowedLineFinding(filePath, label, lineContent)) {
+            continue; // suppressed — check next line
+          }
+          // Not suppressed — record finding
+          lineHit = true;
+          break;
+        }
+      }
+      if (lineHit) {
         findings.push({ pattern: label, file: filePath });
       }
     }
