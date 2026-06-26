@@ -101,6 +101,39 @@ const PATH_FALSE_POSITIVE_EXACT = [
   'http://localhost:5173',
 ];
 
+// =============================================================================
+// ISOLATED SKIP CONTRACT (WP-015-R1 / QC-F-150)
+// =============================================================================
+//
+// In isolated mode (package copied to temp dir without host project), the
+// validator MUST skip ONLY the following SI checks (SI-70~73, SI-80~83).
+// All other SI must PASS or FAIL normally with full checks.
+//
+// Contract reason: the skipped SI check host-level files that do not exist in
+// an isolated package copy.  They are host QA adapters, not Skill runtime.
+//
+// Allowed isolated skip list (exactly 8 SI):
+//   SI-70: 07_DATA/schemas/** is host data schema, not Skill runtime
+//   SI-71: schema parsing belongs to host QA
+//   SI-72: scripts/validate-data.js is repository QA adapter, not in package runtime
+//   SI-73: validate-data.js exit-code semantics verified in full-host mode
+//   SI-80: scripts/sync-data.js is repository QA adapter, not in package runtime
+//   SI-81: scripts/audit-data-consistency.js is repository QA adapter, not in package runtime
+//   SI-82: sync-data.js fail-closed semantics verified in full-host mode
+//   SI-83: watcher/daemon checks target host sync/audit scripts, verified in full-host mode
+const ISOLATED_SKIP_ALLOWED = {
+  70: '07_DATA/schemas/** is host data schema, not Skill runtime',
+  71: 'Schema parsing belongs to host QA',
+  72: 'scripts/validate-data.js is repository QA adapter, not in package runtime',
+  73: 'validate-data.js exit-code semantics verified in full-host mode',
+  80: 'scripts/sync-data.js is repository QA adapter, not in package runtime',
+  81: 'scripts/audit-data-consistency.js is repository QA adapter, not in package runtime',
+  82: 'sync-data.js fail-closed semantics verified in full-host mode',
+  83: 'watcher/daemon checks target host sync/audit scripts, verified in full-host mode',
+};
+// Keys of ISOLATED_SKIP_ALLOWED as Numbers for fast lookup
+var ISOLATED_SKIP_KEYS = Object.keys(ISOLATED_SKIP_ALLOWED).map(Number);
+
 function isFalsePositive(line) {
   return PATH_FALSE_POSITIVE_EXACT.some(s => line === s);
 }
@@ -4714,9 +4747,12 @@ function checkSemanticInvariant69(baseDir) {
  * SI-70: Schema files exist for all 26 data files
  *
  * Verifies that 07_DATA/schemas/ contains a .schema.json for each of the 26 data files.
+ * Skipped in isolated mode (host scripts absent).
  */
-function checkSemanticInvariant70(baseDir) {
+function checkSemanticInvariant70(baseDir, opts) {
+  opts = opts || {};
   var errors = [];
+  if (opts.skipHostScripts) { return errors; }
   var schemaDir = path.join(baseDir, '07_DATA/schemas');
   if (!fs.existsSync(schemaDir)) {
     errors.push('SI-70: 07_DATA/schemas/ directory does not exist');
@@ -4750,9 +4786,12 @@ function checkSemanticInvariant70(baseDir) {
  * SI-71: Schema files are parseable JSON
  *
  * Verifies that every .schema.json file in 07_DATA/schemas/ is valid JSON.
+ * Skipped in isolated mode (host scripts absent).
  */
-function checkSemanticInvariant71(baseDir) {
+function checkSemanticInvariant71(baseDir, opts) {
+  opts = opts || {};
   var errors = [];
+  if (opts.skipHostScripts) { return errors; }
   var schemaDir = path.join(baseDir, '07_DATA/schemas');
   if (!fs.existsSync(schemaDir)) return errors;
   var schemaFiles = fs.readdirSync(schemaDir).filter(function(f) { return f.endsWith('.json'); });
@@ -4766,9 +4805,12 @@ function checkSemanticInvariant71(baseDir) {
 
 /**
  * SI-72: validate-data.js exists and uses only Node.js standard library
+ * Skipped in isolated mode (host scripts absent).
  */
-function checkSemanticInvariant72(baseDir) {
+function checkSemanticInvariant72(baseDir, opts) {
+  opts = opts || {};
   var errors = [];
+  if (opts.skipHostScripts) { return errors; }
   var scriptPath = path.join(baseDir, 'scripts/validate-data.js');
   if (!fs.existsSync(scriptPath)) {
     errors.push('SI-72: scripts/validate-data.js not found');
@@ -4785,9 +4827,12 @@ function checkSemanticInvariant72(baseDir) {
  * SI-73: validate-data.js exit code semantics are fail-closed
  *
  * PASS: process.exit(0), FAIL: non-zero exit.
+ * Skipped in isolated mode (host scripts absent).
  */
-function checkSemanticInvariant73(baseDir) {
+function checkSemanticInvariant73(baseDir, opts) {
+  opts = opts || {};
   var errors = [];
+  if (opts.skipHostScripts) { return errors; }
   var scriptPath = path.join(baseDir, 'scripts/validate-data.js');
   if (!fs.existsSync(scriptPath)) return errors;
   var content = fs.readFileSync(scriptPath, 'utf8');
@@ -5002,9 +5047,12 @@ function checkSemanticInvariant79(baseDir) {
  *
  * PASSES when: all conditions met.
  * FAILS when: file missing, uses npm packages, or does not call validators.
+ * Skipped in isolated mode (host scripts absent).
  */
-function checkSemanticInvariant80(baseDir) {
+function checkSemanticInvariant80(baseDir, opts) {
+  opts = opts || {};
   var errors = [];
+  if (opts.skipHostScripts) { return errors; }
   var scriptPath = path.join(baseDir, 'scripts/sync-data.js');
   if (!fs.existsSync(scriptPath)) {
     errors.push('SI-80: scripts/sync-data.js not found');
@@ -5063,9 +5111,12 @@ function checkSemanticInvariant80(baseDir) {
  *
  * PASSES when: all conditions met.
  * FAILS when: any condition fails.
+ * Skipped in isolated mode (host scripts absent).
  */
-function checkSemanticInvariant81(baseDir) {
+function checkSemanticInvariant81(baseDir, opts) {
+  opts = opts || {};
   var errors = [];
+  if (opts.skipHostScripts) { return errors; }
   var scriptPath = path.join(baseDir, 'scripts/audit-data-consistency.js');
   if (!fs.existsSync(scriptPath)) {
     errors.push('SI-81: scripts/audit-data-consistency.js not found');
@@ -5103,9 +5154,12 @@ function checkSemanticInvariant81(baseDir) {
  *
  * PASSES when: both exit paths present and fail-closed messaging found.
  * FAILS when: file missing, or only one exit path, or no fail-closed messaging.
+ * Skipped in isolated mode (host scripts absent).
  */
-function checkSemanticInvariant82(baseDir) {
+function checkSemanticInvariant82(baseDir, opts) {
+  opts = opts || {};
   var errors = [];
+  if (opts.skipHostScripts) { return errors; }
   var scriptPath = path.join(baseDir, 'scripts/sync-data.js');
   if (!fs.existsSync(scriptPath)) {
     errors.push('SI-82: scripts/sync-data.js not found');
@@ -5134,9 +5188,12 @@ function checkSemanticInvariant82(baseDir) {
  *
  * PASSES when: no forbidden keywords found in either script.
  * FAILS when: any forbidden keyword detected in a script.
+ * Skipped in isolated mode (host scripts absent).
  */
-function checkSemanticInvariant83(baseDir) {
+function checkSemanticInvariant83(baseDir, opts) {
+  opts = opts || {};
   var errors = [];
+  if (opts.skipHostScripts) { return errors; }
   var forbidden = [
     'fs.watch', 'fs.watchFile', 'chokidar', 'nodemon', 'polling',
     'setInterval', 'daemon', 'setScheduledExecutor', 'cron',
@@ -5926,23 +5983,62 @@ function main() {
   const si67 = checkSemanticInvariant67(baseDir);
   const si68 = checkSemanticInvariant68(baseDir);
   const si69 = checkSemanticInvariant69(baseDir);
-  const si70 = checkSemanticInvariant70(baseDir);
-  const si71 = checkSemanticInvariant71(baseDir);
-  const si72 = checkSemanticInvariant72(baseDir);
-  const si73 = checkSemanticInvariant73(baseDir);
+  const si70 = checkSemanticInvariant70(baseDir, { skipHostScripts: isIsolated });
+  const si71 = checkSemanticInvariant71(baseDir, { skipHostScripts: isIsolated });
+  const si72 = checkSemanticInvariant72(baseDir, { skipHostScripts: isIsolated });
+  const si73 = checkSemanticInvariant73(baseDir, { skipHostScripts: isIsolated });
   const si74 = checkSemanticInvariant74(baseDir);
   const si75 = checkSemanticInvariant75(baseDir);
   const si76 = checkSemanticInvariant76(baseDir);
   const si77 = checkSemanticInvariant77(baseDir);
   const si78 = checkSemanticInvariant78(baseDir);
   const si79 = checkSemanticInvariant79(baseDir);
-  const si80 = checkSemanticInvariant80(baseDir);
-  const si81 = checkSemanticInvariant81(baseDir);
-  const si82 = checkSemanticInvariant82(baseDir);
-  const si83 = checkSemanticInvariant83(baseDir);
+  const si80 = checkSemanticInvariant80(baseDir, { skipHostScripts: isIsolated });
+  const si81 = checkSemanticInvariant81(baseDir, { skipHostScripts: isIsolated });
+  const si82 = checkSemanticInvariant82(baseDir, { skipHostScripts: isIsolated });
+  const si83 = checkSemanticInvariant83(baseDir, { skipHostScripts: isIsolated });
   const si84 = checkSemanticInvariant84(baseDir);
   const si85 = checkSemanticInvariant85(baseDir);
   siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32, ...si33, ...si34, ...si35, ...si36, ...si37, ...si38, ...si39, ...si40, ...si41, ...si42, ...si43, ...si44, ...si45, ...si46, ...si47, ...si48, ...si49, ...si50, ...si51, ...si52, ...si53, ...si54, ...si55, ...si56, ...si57, ...si58, ...si59, ...si60, ...si61, ...si62, ...si63, ...si64, ...si65, ...si67, ...si68, ...si69, ...si70, ...si71, ...si72, ...si73, ...si74, ...si75, ...si76, ...si77, ...si78, ...si79, ...si80, ...si81, ...si82, ...si83, ...si84, ...si85);
+
+  // WP-015-R1/R2: Fail-closed isolated skip contract enforcement (QC-F-150, QC-F-154)
+  // Scan ALL checkSemanticInvariantNN function bodies for skipHostScripts usage.
+  // This catches unauthorized skips even when injected via ((opts||{}).skipHostScripts)
+  // in functions that don't declare opts as a parameter.
+  if (isIsolated) {
+    var src = require('fs').readFileSync(__filename, 'utf8');
+    var siWithSkip = [];
+    // Find all checkSemanticInvariantNN function definitions (any signature)
+    var funcPattern = /function checkSemanticInvariant(\d+)\s*\([^)]*\)\s*\{/g;
+    var match;
+    var prevEnd = 0;
+    while ((match = funcPattern.exec(src)) !== null) {
+      var siNum = parseInt(match[1], 10);
+      if (siNum === 66) { prevEnd = match.index + match[0].length; continue; } // SI-66 does not exist
+      var funcStart = match.index + match[0].length;
+      // Find end of this function by counting braces
+      var braceCount = 1;
+      var funcEnd = funcStart;
+      for (var ci = funcStart; ci < src.length; ci++) {
+        if (src[ci] === '{') { braceCount++; }
+        if (src[ci] === '}') { braceCount--; }
+        if (braceCount === 0) { funcEnd = ci; break; }
+      }
+      var funcBody = src.substring(funcStart, funcEnd);
+      // Check if this function body uses skipHostScripts
+      if (funcBody.indexOf('skipHostScripts') !== -1) {
+        siWithSkip.push(siNum);
+      }
+      prevEnd = funcEnd;
+    }
+    // Only SI-70,71,72,73,80,81,82,83 are allowed to use skipHostScripts
+    var notAllowed = siWithSkip.filter(function(n) { return ISOLATED_SKIP_KEYS.indexOf(n) === -1; });
+    if (notAllowed.length > 0) {
+      console.log('  CONTRACT VIOLATION: SI-' + notAllowed.join(', SI-') + ' use skipHostScripts but are not in ISOLATED_SKIP_ALLOWED');
+      totalErrors += notAllowed.length;
+    }
+  }
+
   if (siErrors.length === 0) {
     console.log('  OK: SI-01 (framework auto-selection) PASS');
     console.log('  OK: SI-02 (atomic PU apply) PASS');
@@ -6012,20 +6108,38 @@ function main() {
     console.log('  OK: SI-67 (SC-AGR-06 Allow/Forbid semantic correctness) PASS');
     console.log('  OK: SI-68 (json-data-contract-rules.md in REQUIRED_FILES) PASS');
     console.log('  OK: SI-69 (json-data-contract-rules.md defines all 26/26 JSON files + authority direction) PASS');
-    console.log('  OK: SI-70 (all 26 schema files exist) PASS');
-    console.log('  OK: SI-71 (all schemas are parseable JSON) PASS');
-    console.log('  OK: SI-72 (validate-data.js exists, standard library only) PASS');
-    console.log('  OK: SI-73 (validate-data.js exit code semantics fail-closed) PASS');
+    if (!isIsolated) {
+      console.log('  OK: SI-70 (all 26 schema files exist) PASS');
+      console.log('  OK: SI-71 (all schemas are parseable JSON) PASS');
+      console.log('  OK: SI-72 (validate-data.js exists, standard library only) PASS');
+      console.log('  OK: SI-73 (validate-data.js exit code semantics fail-closed) PASS');
+    } else {
+      // ISOLATED_SKIP_ALLOWED: 70,71,72,73 — host QA adapters, not Skill runtime
+      console.log('  SKIPPED: SI-70~73 (host scripts absent in isolated mode)');
+      console.log('    [ISOLATED_SKIP_ALLOWED] SI-70: 07_DATA/schemas/** is host schema, not Skill runtime');
+      console.log('    [ISOLATED_SKIP_ALLOWED] SI-71: schema parsing belongs to host QA');
+      console.log('    [ISOLATED_SKIP_ALLOWED] SI-72: scripts/validate-data.js is repository QA adapter');
+      console.log('    [ISOLATED_SKIP_ALLOWED] SI-73: validate-data.js exit-code verified in full-host');
+    }
     console.log('  OK: SI-74 (SC-DATA-01..12 scenarios exist) PASS');
     console.log('  OK: SI-75 (PACKAGE_MANIFEST.md registers new rules) PASS');
     console.log('  OK: SI-76 (SKILL.md references new rules and SC-DATA) PASS');
     console.log('  OK: SI-77 (no orphan schemas) PASS');
     console.log('  OK: SI-78 (scenario headings sequential 1..146) PASS');
     console.log('  OK: SI-79 (json-sync-and-audit-rules.md defines authority + prohibition) PASS');
-    console.log('  OK: SI-80 (sync-data.js exists, stdlib only, calls validate-data.js) PASS');
-    console.log('  OK: SI-81 (audit-data-consistency.js exists, read-only, outputs summary) PASS');
-    console.log('  OK: SI-82 (sync-data.js has fail-closed exit code semantics) PASS');
-    console.log('  OK: SI-83 (no forbidden watcher/daemon keywords in sync/audit scripts) PASS');
+    if (!isIsolated) {
+      console.log('  OK: SI-80 (sync-data.js exists, stdlib only, calls validate-data.js) PASS');
+      console.log('  OK: SI-81 (audit-data-consistency.js exists, read-only, outputs summary) PASS');
+      console.log('  OK: SI-82 (sync-data.js has fail-closed exit code semantics) PASS');
+      console.log('  OK: SI-83 (no forbidden watcher/daemon keywords in sync/audit scripts) PASS');
+    } else {
+      // ISOLATED_SKIP_ALLOWED: 80,81,82,83 — host QA adapters, not Skill runtime
+      console.log('  SKIPPED: SI-80~83 (host scripts absent in isolated mode)');
+      console.log('    [ISOLATED_SKIP_ALLOWED] SI-80: scripts/sync-data.js is repository QA adapter');
+      console.log('    [ISOLATED_SKIP_ALLOWED] SI-81: scripts/audit-data-consistency.js is repository QA adapter');
+      console.log('    [ISOLATED_SKIP_ALLOWED] SI-82: sync-data.js fail-closed verified in full-host');
+      console.log('    [ISOLATED_SKIP_ALLOWED] SI-83: watcher/daemon checks target host scripts, verified in full-host');
+    }
     console.log('  OK: SI-84 (SC-SYNC-01..12 scenarios exist in scenarios.md) PASS');
     console.log('  OK: SI-85 (SKILL.md + PACKAGE_MANIFEST.md reference json-sync-and-audit-rules.md) PASS');
   } else {
@@ -6042,6 +6156,11 @@ function main() {
   console.log('Scenario structure errors: ' + sc.errors.length);
   console.log('Absolute path hits: ' + pathHits.length);
   console.log('Semantic invariant violations: ' + siErrors.length);
+  if (isIsolated) {
+    console.log('Mode: ISOLATED (host integration checks skipped per ISOLATED_SKIP_ALLOWED)');
+  } else {
+    console.log('Mode: FULL HOST (all checks enabled)');
+  }
   console.log('');
 
   if (totalErrors === 0) {
