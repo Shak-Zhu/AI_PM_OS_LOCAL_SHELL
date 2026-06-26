@@ -229,7 +229,7 @@ target_agents: [Cursor, Codex]
 
 ## 7. 行为场景
 
-≥134 个 Given / When / Then 行为场景见 `scenarios/scenarios.md`，覆盖：
+≥146 个 Given / When / Then 行为场景见 `scenarios/scenarios.md`，覆盖：
 
 - 4 个专业框架组合（PMBOK / PRINCE2 / APM / PMO / Scrum / Kanban / Hybrid）
 - 4 个审批与权限（PU 绕过、Approved Baseline 覆盖、Sprint / Scope 冲突、Owner 缺失）
@@ -244,10 +244,11 @@ target_agents: [Cursor, Codex]
 - 12 个沟通报告场景（SC-RP-01~12，BRIEFING/MEETING/TODO/报告）
 - 10 个敏捷数据模型场景（SC-AGDM-01~10）
 - 12 个 JSON/Schema 数据契约场景（SC-DATA-01~12）
+- 12 个 JSON 同步与审计场景（SC-SYNC-01~12，Markdown→JSON 同步、幂等性、审计、禁止 watcher）
 
-合计 134 个场景。
+合计 146 个场景。
 
-敏捷数据模型契约（DoR/DoD/Story Point/Backlog/Sprint 等）详见 `references/agile-data-model-rules.md`。JSON 数据契约与 schema 规则详见 `references/json-data-contract-rules.md`。
+敏捷数据模型契约（DoR/DoD/Story Point/Backlog/Sprint 等）详见 `references/agile-data-model-rules.md`。JSON 数据契约与 schema 规则详见 `references/json-data-contract-rules.md`。JSON 同步与审计规则详见 `references/json-sync-and-audit-rules.md`。
 
 ## 8. 安装与调用
 

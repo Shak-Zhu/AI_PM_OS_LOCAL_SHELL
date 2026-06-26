@@ -2245,3 +2245,166 @@
 - **Allow**: 错误信息明确指明类型不匹配。
 - **Forbid**: 验证器将 `null` 作为合法 top-level type。
 - **Evidence**: type mismatch 错误输出；退出码 1。
+
+## 135. SC-SYNC-01：Markdown → JSON 同步后 schema 验证通过
+
+- **ID**: SC-SYNC-01
+
+- **Given**: `00_PM_MEMORY/PM_CURRENT_STATUS.md` 包含有效结构化内容。
+- **When**: 执行 `node scripts/sync-data.js`。
+- **Then**:
+  1. `scripts/sync-data.js` 将 Markdown 数据同步到 `07_DATA/project_state.json`；
+  2. 同步后调用 `scripts/validate-data.js` 进行 schema 验证；
+  3. schema 验证通过，退出码为 0。
+- **Allow**: 同步跳过无源 JSON 文件。
+- **Forbid**: 同步产生 schema-invalid JSON。
+- **Evidence**: sync-data.js 输出；validate-data.js 通过输出；退出码 0。
+
+## 136. SC-SYNC-02：同步脚本幂等性验证
+
+- **ID**: SC-SYNC-02
+
+- **Given**: `07_DATA/` 中已有符合 schema 的 JSON 文件（由首次同步生成）。
+- **When**: 连续执行两次 `node scripts/sync-data.js`。
+- **Then**:
+  1. 第一次同步完成，退出码 0；
+  2. 第二次同步完成，退出码 0；
+  3. 两次同步后 `git diff -- 07_DATA/` 输出为空。
+- **Allow**: 第二次 sync 输出 SKIP 或 SYNCED 均可，只要无 diff。
+- **Forbid**: 第二次 sync 产生对任何 JSON 文件的修改。
+- **Evidence**: 两次 sync 输出对比；`git diff -- 07_DATA/` 输出为空。
+
+## 137. SC-SYNC-03：缺失 Markdown 源时同步跳过
+
+- **ID**: SC-SYNC-03
+
+- **Given**: `01_PM_DOCUMENTS/PM_DOCUMENT_REGISTRY.md` 不存在（产品壳状态）。
+- **When**: 执行 `node scripts/sync-data.js`。
+- **Then**:
+  1. sync-data.js 为 `documents.json` 输出 SKIP；
+  2. 退出码为 0（不因缺失源而 fail-closed）。
+- **Allow**: sync-data.js 输出 SKIP 状态且不写入无效 JSON。
+- **Forbid**: sync-data.js 因缺失源文件而退出 1。
+- **Evidence**: sync-data.js 输出包含 "SKIP: documents.json"；退出码 0。
+
+## 138. SC-SYNC-04：schema 缺失时同步 fail-closed
+
+- **ID**: SC-SYNC-04
+
+- **Given**: `07_DATA/schemas/actions.schema.json` 被删除或不存在。
+- **When**: 执行 `node scripts/sync-data.js`。
+- **Then**:
+  1. sync-data.js 检测到 schema 缺失；
+  2. 退出码为 1（fail-closed）。
+- **Allow**: 脚本输出明确错误信息。
+- **Forbid**: 脚本在 schema 缺失时仍退出 0。
+- **Evidence**: sync-data.js 错误输出；退出码 1。
+
+## 139. SC-SYNC-05：审计脚本只读性验证
+
+- **ID**: SC-SYNC-05
+
+- **Given**: `07_DATA/` 和 `00_PM_MEMORY/` 处于干净状态。
+- **When**: 执行 `node scripts/audit-data-consistency.js`。
+- **Then**:
+  1. 审计完成，输出摘要字段 `checked_files`、`critical_count`、`major_count`、`minor_count`、`result`；
+  2. 审计不修改任何文件；
+  3. 在干净状态下退出码为 0。
+- **Allow**: 存在 MINOR 问题（模板源缺失）时退出码仍为 0。
+- **Forbid**: 审计产生任何文件写入操作。
+- **Evidence**: `git status -- 07_DATA/` 和 `git status -- 00_PM_MEMORY/` 在审计前后相同；退出码 0。
+
+## 140. SC-SYNC-06：审计发现 Critical 问题后 fail-closed
+
+- **ID**: SC-SYNC-06
+
+- **Given**: `07_DATA/approvals.json` 被损坏为无效 JSON（语法错误）。
+- **When**: 执行 `node scripts/audit-data-consistency.js`。
+- **Then**:
+  1. 审计检测到 approvals.json 无法解析；
+  2. 报告 Critical 级别问题；
+  3. 退出码为 1（fail-closed）。
+- **Allow**: 错误信息明确指出问题文件和问题类型。
+- **Forbid**: 审计在 Critical 问题存在时仍退出 0。
+- **Evidence**: 审计输出包含 Critical 级别问题；退出码 1。
+
+## 141. SC-SYNC-07：Source Map 一致性检查
+
+- **ID**: SC-SYNC-07
+
+- **Given**: 审计脚本声明的 Source Map 包含 `01_PM_DOCUMENTS/PM_DOCUMENT_REGISTRY.md`。
+- **When**: 执行 `node scripts/audit-data-consistency.js`。
+- **Then**:
+  1. 审计检查 Source Map 中每个 JSON→Markdown 映射；
+  2. 对声明的 Markdown 源进行存在性检查；
+  3. 缺失源报告为 MINOR（模板壳状态允许）。
+- **Allow**: 缺失源在干净产品壳时为 MINOR 级别。
+- **Forbid**: 缺失源被忽略不报告。
+- **Evidence**: 审计输出包含 "MINOR: ... declared source does not exist"。
+
+## 142. SC-SYNC-08：禁止 JSON → Markdown 反向覆盖
+
+- **ID**: SC-SYNC-08
+
+- **Given**: `07_DATA/project_state.json` 包含数据，`00_PM_MEMORY/PM_CURRENT_STATUS.md` 也存在。
+- **When**: 执行 `node scripts/sync-data.js`。
+- **Then**:
+  1. sync-data.js 只修改 JSON 文件，不修改任何 Markdown 文件；
+  2. `git diff -- 00_PM_MEMORY/` 在同步后为空。
+- **Allow**: sync-data.js 输出 SKIP 或 SYNCED 均可。
+- **Forbid**: sync-data.js 修改任何 Markdown 源文件。
+- **Evidence**: `git diff -- 00_PM_MEMORY/` 输出为空；Markdown 文件修改时间未变。
+
+## 143. SC-SYNC-09：禁止后台监听/Watchdog 关键词
+
+- **ID**: SC-SYNC-09
+
+- **Given**: `scripts/sync-data.js` 和 `scripts/audit-data-consistency.js` 已存在。
+- **When**: 执行 `node ai-pm-os/scripts/validate-skill.js`（SI-83 检查）。
+- **Then**:
+  1. validate-skill.js 检测两个脚本是否包含 `fs.watch`、`setInterval`、`chokidar`、`nodemon` 等禁止关键词；
+  2. 无禁止关键词时，SI-83 通过。
+- **Allow**: 脚本不包含任何文件系统监听或定时任务。
+- **Forbid**: 脚本包含任何形式的 watcher、daemon 或 polling 逻辑。
+- **Evidence**: validate-skill.js SI-83 输出 "PASS"。
+
+## 144. SC-SYNC-10：同步脚本使用 Node.js 标准库
+
+- **ID**: SC-SYNC-10
+
+- **Given**: `scripts/sync-data.js` 已存在。
+- **When**: 执行 `node ai-pm-os/scripts/validate-skill.js`（SI-80 检查）。
+- **Then**:
+  1. validate-skill.js 检测 sync-data.js 是否使用 npm 包（非标准库）；
+  2. 脚本只使用 Node.js 内置模块（`fs`、`path`、`child_process` 等）；
+  3. SI-80 通过。
+- **Allow**: 使用 `fs`、`path`、`child_process` 等标准库模块。
+- **Forbid**: `require()` 任何 npm 包（如 `axios`、`chalk`、`lodash`）。
+- **Evidence**: validate-skill.js SI-80 输出 "PASS"。
+
+## 145. SC-SYNC-11：未批准 PU 禁止同步
+
+- **ID**: SC-SYNC-11
+
+- **Given**: `00_PM_MEMORY/PM_PENDING_UPDATES.md` 中存在状态为 `Proposed` 的 Pending Update。
+- **When**: 执行 `node scripts/sync-data.js`（同步 approvals.json）。
+- **Then**:
+  1. sync-data.js 不将 `Proposed` 状态的 PU 数据写入 `approvals.json` 的 `Approved` 或 `Applied` 状态字段；
+  2. 同步行为遵守 PU 状态机规则。
+- **Allow**: 保留现有 approvals.json 状态不变，或同步时以 `Proposed` 状态处理。
+- **Forbid**: 将 `Proposed` 状态的 PU 直接写入 `Approved` 或 `Applied`。
+- **Evidence**: approvals.json 中不存在来自未批准 PU 的 Approved/Applied 状态数据。
+
+## 146. SC-SYNC-12：审计摘要字段完整性
+
+- **ID**: SC-SYNC-12
+
+- **Given**: `scripts/audit-data-consistency.js` 已存在。
+- **When**: 执行 `node scripts/audit-data-consistency.js`。
+- **Then**:
+  1. stdout 输出包含 `checked_files: <N>`；
+  2. stdout 输出包含 `critical_count: <N>`、`major_count: <N>`、`minor_count: <N>`；
+  3. stdout 输出包含 `result: PASS` 或 `result: FAIL`。
+- **Allow**: 字段顺序和格式可变化。
+- **Forbid**: 任何必需摘要字段缺失。
+- **Evidence**: 审计 stdout 输出包含全部 5 个必需字段。

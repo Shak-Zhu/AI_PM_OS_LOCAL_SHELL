@@ -30,6 +30,7 @@
 | `references/agile-data-model-rules.md` | 11 类敏捷对象数据模型契约（ADM-01~11）、字段规范、状态枚举、审批规则、禁止状态 | 无 |
 | `references/agile-reporting-rules.md` | 敏捷报告输入/JSON读取契约、8类P0指标、Burndown 9字段、Velocity 8字段、Scope冲突检查、fail-closed规则 | 无 |
 | `references/json-data-contract-rules.md` | 26 个 JSON 数据契约、Schema 孤儿检查、P0 限制声明 | 无 |
+| `references/json-sync-and-audit-rules.md` | Markdown→JSON 同步规则、审计契约、Source Map、Fail-Closed 行为 | 无 |
 | `references/memory-and-recovery.md` | 六层信息源、Memory Boot 顺序、Active Context 契约 | 无 |
 | `references/runtime-compliance-contracts.md` | 6 类 Critical Output Contract、10 字段、Pre-send Compliance Gate | 无 |
 | `references/execution-integrity.md` | 执行身份模型、状态机、幂等 PU、部分失败恢复 | 无 |
@@ -43,13 +44,13 @@
 
 | 文件 | 用途 | 包外依赖 |
 |---|---|---|
-| `scenarios/scenarios.md` | 134 个结构化 Given/When/Then/Allow/Forbid/Evidence 场景（60 原 + 10 WP-006 + 10 WP-007 + 10 WP-008 + 12 WP-009 + 10 WP-010 + 10 WP-011 + 12 WP-012 新增） | 无 |
+| `scenarios/scenarios.md` | 146 个结构化 Given/When/Then/Allow/Forbid/Evidence 场景（60 原 + 10 WP-006 + 10 WP-007 + 10 WP-008 + 12 WP-009 + 10 WP-010 + 10 WP-011 + 12 WP-012 + 12 WP-013 新增） | 无 |
 
 ### 1.4 包内验证脚本（scripts/）
 
 | 文件 | 用途 | 说明 |
 |---|---|---|
-| `scripts/validate-skill.js` | SI-01~SI-78 机器可验证规则；自包含运行（无外部包依赖）；支持隔离模式（无宿主文件时跳过 AGENTS.md/_AI_GLOBAL_MEMORY/ 检查） | 唯一验证实现 |
+| `scripts/validate-skill.js` | SI-01~SI-85 机器可验证规则；自包含运行（无外部包依赖）；支持隔离模式（无宿主文件时跳过 AGENTS.md/_AI_GLOBAL_MEMORY/ 检查） | 唯一验证实现 |
 
 **注意**：`scripts/check-pollution.js` 不属于包内文件；它是根目录仓库 QA 适配器，需要宿主项目的 `_DEV_PROJECT_CONTROL/` 等文件，不在独立包安装范围内。
 

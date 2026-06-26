@@ -1,17 +1,17 @@
 {
-  "last_synced": null,
-  "project_name": null,
-  "rag_status": null,
-  "overall_progress": 0,
-  "scope_status": null,
-  "open_risks": 0,
+  "current_sprint": null,
+  "document_health_score": 0,
   "high_risks": 0,
+  "last_synced": null,
+  "latest_meeting_minutes_status": null,
   "open_actions": 0,
+  "open_risks": 0,
+  "overall_progress": 0,
   "overdue_actions": 0,
   "pending_approvals": 0,
-  "current_sprint": null,
+  "project_name": null,
+  "rag_status": "green",
+  "scope_status": null,
   "sprint_progress": 0,
-  "todo_completion_rate": 0,
-  "document_health_score": 0,
-  "latest_meeting_minutes_status": null
+  "todo_completion_rate": 0
 }
