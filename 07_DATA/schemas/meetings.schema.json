@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "meetings",
+  "description": "Meeting index",
+  "type": "object",
+  "properties": {
+    "meetings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["meeting_id", "title", "date", "status"],
+        "properties": {
+          "meeting_id": { "type": "string" },
+          "title": { "type": "string" },
+          "date": { "type": "string" },
+          "status": { "type": "string", "enum": ["scheduled", "completed", "cancelled"] },
+          "organizer": { "type": "string" }
+        }
+      }
+    }
+  }
+}

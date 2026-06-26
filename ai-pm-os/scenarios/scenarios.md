@@ -2077,3 +2077,171 @@
 - **Allow**: Gap 标注；Conflict 标注；数据不可用时简化为"无敏捷数据可用"。
 - **Forbid**: 编造数据；推断趋势；将"无数据"描述为正面状态；自动修正 JSON。
 - **Evidence**: Gap 内容；Conflict 内容；禁止输出内容检查结果。
+
+---
+
+## 123. SC-DATA-01：缺少 data file
+- **ID**: SC-DATA-01
+
+- **Given**: `07_DATA/` 目录存在，`scripts/validate-data.js` 已就绪。
+- **When**: 执行 `node scripts/validate-data.js`；某 JSON data file（如 `actions.json`）不存在。
+- **Then**:
+  1. 验证器 Phase 1 报告该文件 MISSING；
+  2. 最终退出码为 1（FAIL）。
+- **Allow**: 验证器继续检查其余 25 个文件并报告全部状态。
+- **Forbid**: 验证器退出码为 0。
+- **Evidence**: `node scripts/validate-data.js` 输出中 MISSING 行；退出码 1。
+
+---
+
+## 124. SC-DATA-02：缺少 schema file
+- **ID**: SC-DATA-02
+
+- **Given**: `07_DATA/actions.json` 存在，`07_DATA/schemas/actions.schema.json` 不存在。
+- **When**: 执行 `node scripts/validate-data.js`。
+- **Then**:
+  1. 验证器报告 `actions.json` SKIP（schema not found）；
+  2. 最终退出码为 1（FAIL）。
+- **Allow**: 验证器继续检查其余 schema 文件。
+- **Forbid**: 验证器将缺少 schema 的文件标记为 OK。
+- **Evidence**: `node scripts/validate-data.js` 输出中 SKIP 行；退出码 1。
+
+---
+
+## 125. SC-DATA-03：JSON 语法错误
+- **ID**: SC-DATA-03
+
+- **Given**: `07_DATA/actions.json` 存在但包含无效 JSON（如多余逗号）。
+- **When**: 执行 `node scripts/validate-data.js`。
+- **Then**:
+  1. 验证器报告 JSON parse error；
+  2. 最终退出码为 1（FAIL）。
+- **Allow**: 错误信息包含具体位置（行号或字符偏移）。
+- **Forbid**: 验证器将语法错误文件标记为 OK。
+- **Evidence**: parse error 输出；退出码 1。
+
+---
+
+## 126. SC-DATA-04：top-level type 错误（数组→对象）
+- **ID**: SC-DATA-04
+
+- **Given**: `07_DATA/actions.json` 的 top-level 从 object 改为 array。
+- **When**: 执行 `node scripts/validate-data.js`。
+- **Then**:
+  1. 验证器报告 `top-level type mismatch: expected object, got array`；
+  2. 最终退出码为 1（FAIL）。
+- **Allow**: 错误信息指明期望类型与实际类型。
+- **Forbid**: 验证器接受 top-level type 变更。
+- **Evidence**: type mismatch 错误输出；退出码 1。
+
+---
+
+## 127. SC-DATA-05：必填字段缺失
+- **ID**: SC-DATA-05
+
+- **Given**: `07_DATA/actions.json` 中某 action item 缺少 `action_id` 字段。
+- **When**: 执行 `node scripts/validate-data.js`。
+- **Then**:
+  1. 验证器报告 `actions[N] missing required field: action_id`；
+  2. 最终退出码为 1（FAIL）。
+- **Allow**: 错误信息指明字段名和数组索引。
+- **Forbid**: 验证器接受缺失必填字段的 item。
+- **Evidence**: missing required field 错误输出；退出码 1。
+
+---
+
+## 128. SC-DATA-06：状态枚举错误
+- **ID**: SC-DATA-06
+
+- **Given**: `07_DATA/actions.json` 中某 action 的 `status` 字段写入非法枚举值 `done`（应为 `completed`）。
+- **When**: 执行 `node scripts/validate-data.js`。
+- **Then**:
+  1. 验证器报告 `status invalid enum value: done`；
+  2. 最终退出码为 1（FAIL）。
+- **Allow**: 错误信息指明字段名和非法值。
+- **Forbid**: 验证器接受 schema 中未定义的状态值。
+- **Evidence**: invalid enum 错误输出；退出码 1。
+
+---
+
+## 129. SC-DATA-07：Markdown/JSON 权威方向错误
+- **ID**: SC-DATA-07
+
+- **Given**: `json-data-contract-rules.md` 已定义 Markdown→JSON 权威方向。
+- **When**: Agent 执行操作时将 JSON 写入内容反向覆盖对应 Markdown 源文件。
+- **Then**:
+  1. SI-68 检测到 `json-data-contract-rules.md` 中存在且定义了权威方向；
+  2. Agent 违反契约将 JSON 数据写入 Markdown 源目录。
+- **Allow**: Agent 仅从 Markdown 读取并同步到 JSON。
+- **Forbid**: Agent 将 JSON 内容写入 `02_AGILE/`、`03_MEETINGS/` 等 Markdown 权威目录。
+- **Evidence**: `node ai-pm-os/scripts/validate-skill.js` 失败（若 Agent 执行了反向写入）。
+
+---
+
+## 130. SC-DATA-08：schema 孤儿文件
+- **ID**: SC-DATA-08
+
+- **Given**: `07_DATA/schemas/extra.schema.json` 存在但无对应 `07_DATA/extra.json`。
+- **When**: 执行 `node scripts/validate-data.js`。
+- **Then**:
+  1. 验证器 Phase 3 报告孤儿 schema `extra.schema.json`；
+  2. 最终退出码为 1（FAIL）。
+- **Allow**: 孤儿 schema 被报告，不影响其他检查。
+- **Forbid**: 验证器跳过孤儿 schema 检查。
+- **Evidence**: Phase 3 ORPHAN 输出；退出码 1。
+
+---
+
+## 131. SC-DATA-09：空数组合法
+- **ID**: SC-DATA-09
+
+- **Given**: `07_DATA/actions.json` 内容为 `{"actions":[]}`（空数组）。
+- **When**: 执行 `node scripts/validate-data.js`。
+- **Then**:
+  1. 验证器报告 `actions.json` OK；
+  2. 最终退出码为 0（PASS）。
+- **Allow**: 空数组 `[]` 作为合法 shape；验证器不要求数组必须包含元素。
+- **Forbid**: 验证器将空数组报告为 FAIL。
+- **Evidence**: `node scripts/validate-data.js` 输出 OK；退出码 0。
+
+---
+
+## 132. SC-DATA-10：schema 验证脚本 fail-closed
+- **ID**: SC-DATA-10
+
+- **Given**: `07_DATA/actions.json` 完全为空（不是合法 JSON）。
+- **When**: 执行 `node scripts/validate-data.js`。
+- **Then**:
+  1. 验证器报告 JSON parse error；
+  2. 最终退出码为 1（FAIL）。
+- **Allow**: 解析失败立即报告错误并退出非 0。
+- **Forbid**: 验证器静默跳过无效 JSON；验证器退出码 0。
+- **Evidence**: parse error 输出；退出码 1。
+
+---
+
+## 133. SC-DATA-11：数字范围超限
+- **ID**: SC-DATA-11
+
+- **Given**: `07_DATA/dashboard_state.json` 中 `overall_progress` 写入 150（超出 0~100 范围）。
+- **When**: 执行 `node scripts/validate-data.js`。
+- **Then**:
+  1. 验证器报告 `overall_progress above maximum: 150 > 100`；
+  2. 最终退出码为 1（FAIL）。
+- **Allow**: 错误信息指明字段名、实际值和最大值。
+- **Forbid**: 验证器接受超出 schema 范围的数字值。
+- **Evidence**: above maximum 错误输出；退出码 1。
+
+---
+
+## 134. SC-DATA-12：JSON 顶层类型为 null
+- **ID**: SC-DATA-12
+
+- **Given**: `07_DATA/actions.json` 内容为 `null`（不是合法 object 或 array）。
+- **When**: 执行 `node scripts/validate-data.js`。
+- **Then**:
+  1. 验证器报告 `top-level type mismatch: expected object, got unknown`；
+  2. 最终退出码为 1（FAIL）。
+- **Allow**: 错误信息明确指明类型不匹配。
+- **Forbid**: 验证器将 `null` 作为合法 top-level type。
+- **Evidence**: type mismatch 错误输出；退出码 1。

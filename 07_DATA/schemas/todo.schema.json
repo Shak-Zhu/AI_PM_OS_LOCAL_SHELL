@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "todo",
+  "description": "Daily todo items",
+  "type": "object",
+  "properties": {
+    "todos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["todo_id", "description", "status", "date"],
+        "properties": {
+          "todo_id": { "type": "string" },
+          "description": { "type": "string" },
+          "status": { "type": "string", "enum": ["open", "done", "cancelled"] },
+          "date": { "type": "string" },
+          "source": { "type": "string" },
+          "carry_over": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

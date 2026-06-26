@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "velocity",
+  "description": "Sprint velocity log",
+  "type": "object",
+  "properties": {
+    "velocity": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sprint_id", "planned_points", "completed_points"],
+        "properties": {
+          "sprint_id": { "type": "string" },
+          "planned_points": { "type": "number" },
+          "completed_points": { "type": "number" },
+          "accepted_points": { "type": "number" },
+          "carry_over_points": { "type": "number" },
+          "velocity_variance": { "type": "number" },
+          "variance_reason": { "type": "string" },
+          "source": { "type": "string" }
+        }
+      }
+    }
+  }
+}

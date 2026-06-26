@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "project_state",
+  "description": "Project state snapshot",
+  "type": "object",
+  "properties": {
+    "project_id": { "type": "string" },
+    "project_name": { "type": "string" },
+    "current_phase": { "type": "string", "enum": ["INITIALIZE_PROJECT", "PLANNING", "EXECUTING", "MONITORING", "CLOSING", "COMPLETED"] },
+    "delivery_mode": { "type": "string" },
+    "rag_status": { "type": "string", "enum": ["green", "amber", "red"] },
+    "overall_progress": { "type": "number", "minimum": 0, "maximum": 100 },
+    "scope_baseline_status": { "type": "string" },
+    "current_sprint": { "type": "string" },
+    "last_updated": { "type": "string" },
+    "key_blockers": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["project_id", "project_name", "current_phase"]
+}

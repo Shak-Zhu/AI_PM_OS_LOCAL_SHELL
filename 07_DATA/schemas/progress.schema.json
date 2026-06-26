@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "progress",
+  "description": "Project progress metrics",
+  "type": "object",
+  "properties": {
+    "overall_progress": { "type": "number", "minimum": 0, "maximum": 100 },
+    "requirements_completion": { "type": "number", "minimum": 0, "maximum": 100 },
+    "milestones_completion": { "type": "number", "minimum": 0, "maximum": 100 },
+    "actions_completion": { "type": "number", "minimum": 0, "maximum": 100 },
+    "basis": { "type": "string" }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "input_log",
+  "description": "Input material log",
+  "type": "object",
+  "properties": {
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["input_id", "source", "received_date"],
+        "properties": {
+          "input_id": { "type": "string" },
+          "source": { "type": "string" },
+          "received_date": { "type": "string" },
+          "processed": { "type": "boolean" },
+          "pu_generated": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

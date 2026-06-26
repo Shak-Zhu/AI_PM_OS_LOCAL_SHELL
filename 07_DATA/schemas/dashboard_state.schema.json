@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard_state",
+  "description": "Dashboard aggregate state",
+  "type": "object",
+  "properties": {
+    "last_synced": { "type": ["string", "null"] },
+    "project_name": { "type": ["string", "null"] },
+    "rag_status": { "type": ["string", "null"], "enum": ["green", "amber", "red", null] },
+    "overall_progress": { "type": "number", "minimum": 0, "maximum": 100 },
+    "scope_status": { "type": ["string", "null"] },
+    "open_risks": { "type": "number" },
+    "high_risks": { "type": "number" },
+    "open_actions": { "type": "number" },
+    "overdue_actions": { "type": "number" },
+    "pending_approvals": { "type": "number" },
+    "current_sprint": { "type": ["string", "null"] },
+    "sprint_progress": { "type": "number", "minimum": 0, "maximum": 100 },
+    "todo_completion_rate": { "type": "number", "minimum": 0, "maximum": 100 },
+    "document_health_score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "latest_meeting_minutes_status": { "type": ["string", "null"] }
+  }
+}

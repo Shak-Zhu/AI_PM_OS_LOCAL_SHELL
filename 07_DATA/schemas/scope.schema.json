@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "scope",
+  "description": "Scope baseline data",
+  "type": "object",
+  "properties": {
+    "scope_baseline": { "type": "string" },
+    "in_scope": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "out_of_scope": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

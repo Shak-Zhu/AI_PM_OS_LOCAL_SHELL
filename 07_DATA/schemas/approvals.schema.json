@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "approvals",
+  "description": "Pending update approvals",
+  "type": "object",
+  "properties": {
+    "approvals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["approval_id", "pu_id", "requestor", "status", "submitted_date"],
+        "properties": {
+          "approval_id": { "type": "string" },
+          "pu_id": { "type": "string" },
+          "requestor": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+          "submitted_date": { "type": "string" },
+          "decision_date": { "type": "string" },
+          "decision_by": { "type": "string" }
+        }
+      }
+    }
+  }
+}

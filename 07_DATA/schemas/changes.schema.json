@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "changes",
+  "description": "Change log entries",
+  "type": "object",
+  "properties": {
+    "source": { "type": "string" },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["change_id", "description", "status", "submitted_date"],
+        "properties": {
+          "change_id": { "type": "string" },
+          "description": { "type": "string" },
+          "status": { "type": "string", "enum": ["draft", "submitted", "approved", "rejected", "implemented"] },
+          "submitted_date": { "type": "string" },
+          "approved_date": { "type": "string" }
+        }
+      }
+    }
+  }
+}

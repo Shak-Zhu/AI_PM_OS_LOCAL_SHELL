@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "burndown",
+  "description": "Sprint burndown data",
+  "type": "object",
+  "properties": {
+    "sprint_id": { "type": "string" },
+    "total_points": { "type": "number" },
+    "days": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["date", "ideal_remaining", "actual_remaining"],
+        "properties": {
+          "date": { "type": "string" },
+          "ideal_remaining": { "type": "number" },
+          "actual_remaining": { "type": "number" }
+        }
+      }
+    }
+  }
+}

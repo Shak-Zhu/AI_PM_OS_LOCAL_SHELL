@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "estimation",
+  "description": "Story estimation log",
+  "type": "object",
+  "properties": {
+    "estimates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["story_id", "estimated_points", "estimator"],
+        "properties": {
+          "story_id": { "type": "string" },
+          "estimated_points": { "type": "number" },
+          "estimator": { "type": "string" },
+          "method": { "type": "string" },
+          "date": { "type": "string" }
+        }
+      }
+    }
+  }
+}

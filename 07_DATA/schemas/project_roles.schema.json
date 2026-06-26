@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "project_roles",
+  "description": "Project role configuration",
+  "type": "object",
+  "properties": {
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role_id", "role_name"],
+        "properties": {
+          "role_id": { "type": "string" },
+          "role_name": { "type": "string" },
+          "default_or_optional": { "type": "string", "enum": ["default", "optional"] },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  }
+}

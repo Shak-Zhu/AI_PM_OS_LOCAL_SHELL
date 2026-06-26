@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "backlog",
+  "description": "Product backlog stories",
+  "type": "object",
+  "properties": {
+    "backlog": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["story_id", "title", "status", "priority"],
+        "properties": {
+          "story_id": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "string", "enum": ["draft", "ready", "committed", "in_progress", "done", "removed"] },
+          "priority": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+          "story_points": { "type": "number" },
+          "sprint_id": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -29,7 +29,9 @@ const path = require('path');
 // WP-007: Extended to 80 (added 10 command/routing scenarios SC-CMD-01..10).
 // WP-009: Extended to 102 (added 12 communication/reporting scenarios SC-RP-01..12).
 // WP-010: Extended to 112 (added 10 agile data model scenarios SC-AGDM-01..10).
-const EXPECTED_SCENARIO_COUNT = 122;
+// WP-011: Extended to 122 (added 10 agile-reporting scenarios SC-AGR-01..10).
+// WP-012: Extended to 134 (added 12 JSON/Schema data contract scenarios SC-DATA-01..12).
+const EXPECTED_SCENARIO_COUNT = 134;
 
 // Required files inside the ai-pm-os/ package
 const REQUIRED_FILES = [
@@ -50,6 +52,7 @@ const REQUIRED_FILES = [
   'ai-pm-os/references/communication-and-reporting-rules.md',
   'ai-pm-os/references/agile-data-model-rules.md',
   'ai-pm-os/references/agile-reporting-rules.md',
+  'ai-pm-os/references/json-data-contract-rules.md',
   'ai-pm-os/scenarios/scenarios.md',
 ];
 const REQUIRED_CAPABILITY_TAGS = [
@@ -4544,6 +4547,295 @@ function checkSemanticInvariant58(baseDir) {
 
 
 
+// ============================================================================
+// WP-012: JSON Data Contract Semantic Invariants (SI-68 to SI-78)
+// ============================================================================
+
+/**
+ * SI-68: json-data-contract-rules.md is in REQUIRED_FILES
+ *
+ * The new json-data-contract-rules.md must be registered in REQUIRED_FILES.
+ * File existence alone does NOT satisfy this SI.
+ */
+function checkSemanticInvariant68(baseDir) {
+  var errors = [];
+  if (!REQUIRED_FILES.includes('ai-pm-os/references/json-data-contract-rules.md')) {
+    errors.push('SI-68: json-data-contract-rules.md NOT in REQUIRED_FILES');
+  }
+  return errors;
+}
+
+/**
+ * SI-69: json-data-contract-rules.md defines all 26 JSON data files AND authority direction
+ *
+ * Verifies that the rules document:
+ * (a) References at least 20 of the 26 known JSON files.
+ * (b) Contains the authoritative Markdown→JSON direction statement.
+ */
+function checkSemanticInvariant69(baseDir) {
+  var errors = [];
+  var rulesPath = path.join(baseDir, 'ai-pm-os/references/json-data-contract-rules.md');
+  if (!fs.existsSync(rulesPath)) {
+    errors.push('SI-69: json-data-contract-rules.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(rulesPath, 'utf8');
+
+  // (a) Check for known JSON file names
+  var knownFiles = [
+    'actions.json', 'approvals.json', 'backlog.json', 'burndown.json',
+    'changes.json', 'daily_briefing.json', 'dashboard_state.json',
+    'decisions.json', 'documents.json', 'estimation.json',
+    'gantt.json', 'input_log.json', 'meeting_actions.json',
+    'meeting_decisions.json', 'meetings.json', 'milestones.json',
+    'progress.json', 'project_roles.json', 'project_state.json',
+    'raid.json', 'reports.json', 'requirements.json',
+    'scope.json', 'sprints.json', 'todo.json', 'velocity.json'
+  ];
+  var found = 0;
+  var missingFiles = [];
+  for (var i = 0; i < knownFiles.length; i++) {
+    if (content.indexOf(knownFiles[i]) !== -1) {
+      found++;
+    } else {
+      missingFiles.push(knownFiles[i]);
+    }
+  }
+  if (missingFiles.length > 0) {
+    errors.push('SI-69: json-data-contract-rules.md missing ' + missingFiles.length + '/26 JSON file references: ' + missingFiles.join(', '));
+  }
+
+  // (b) Check for authoritative Markdown→JSON direction
+  // The specific phrase "JSON 是 Markdown 的可视化同步层" must be present.
+  // This is the core authority declaration that must not be removed or reversed.
+  if (content.indexOf('JSON 是 Markdown 的可视化同步层') === -1) {
+    errors.push('SI-69: json-data-contract-rules.md missing core authority declaration "JSON 是 Markdown 的可视化同步层"');
+  }
+
+  return errors;
+}
+
+/**
+ * SI-70: Schema files exist for all 26 data files
+ *
+ * Verifies that 07_DATA/schemas/ contains a .schema.json for each of the 26 data files.
+ */
+function checkSemanticInvariant70(baseDir) {
+  var errors = [];
+  var schemaDir = path.join(baseDir, '07_DATA/schemas');
+  if (!fs.existsSync(schemaDir)) {
+    errors.push('SI-70: 07_DATA/schemas/ directory does not exist');
+    return errors;
+  }
+  var schemaFiles = fs.readdirSync(schemaDir).filter(function(f) { return f.endsWith('.json'); });
+  var dataFiles = [
+    'actions.json', 'approvals.json', 'backlog.json', 'burndown.json',
+    'changes.json', 'daily_briefing.json', 'dashboard_state.json',
+    'decisions.json', 'documents.json', 'estimation.json',
+    'gantt.json', 'input_log.json', 'meeting_actions.json',
+    'meeting_decisions.json', 'meetings.json', 'milestones.json',
+    'progress.json', 'project_roles.json', 'project_state.json',
+    'raid.json', 'reports.json', 'requirements.json',
+    'scope.json', 'sprints.json', 'todo.json', 'velocity.json'
+  ];
+  var schemaSet = {};
+  for (var i = 0; i < schemaFiles.length; i++) { schemaSet[schemaFiles[i]] = true; }
+  var missing = [];
+  for (var j = 0; j < dataFiles.length; j++) {
+    var expectedSchema = dataFiles[j].replace('.json', '.schema.json');
+    if (!schemaSet[expectedSchema]) missing.push(expectedSchema);
+  }
+  if (missing.length > 0) {
+    errors.push('SI-70: Missing schema files: ' + missing.join(', '));
+  }
+  return errors;
+}
+
+/**
+ * SI-71: Schema files are parseable JSON
+ *
+ * Verifies that every .schema.json file in 07_DATA/schemas/ is valid JSON.
+ */
+function checkSemanticInvariant71(baseDir) {
+  var errors = [];
+  var schemaDir = path.join(baseDir, '07_DATA/schemas');
+  if (!fs.existsSync(schemaDir)) return errors;
+  var schemaFiles = fs.readdirSync(schemaDir).filter(function(f) { return f.endsWith('.json'); });
+  for (var i = 0; i < schemaFiles.length; i++) {
+    var fp = path.join(schemaDir, schemaFiles[i]);
+    try { JSON.parse(fs.readFileSync(fp, 'utf8')); }
+    catch (e) { errors.push('SI-71: ' + schemaFiles[i] + ' parse error: ' + e.message); }
+  }
+  return errors;
+}
+
+/**
+ * SI-72: validate-data.js exists and uses only Node.js standard library
+ */
+function checkSemanticInvariant72(baseDir) {
+  var errors = [];
+  var scriptPath = path.join(baseDir, 'scripts/validate-data.js');
+  if (!fs.existsSync(scriptPath)) {
+    errors.push('SI-72: scripts/validate-data.js not found');
+    return errors;
+  }
+  var content = fs.readFileSync(scriptPath, 'utf8');
+  if (/\brequire\s*\(\s*['"][^'"]*(?:axios|request|chalk|commander|minimist|fs-extra|glob|express|lodash|dottie)/i.test(content)) {
+    errors.push('SI-72: scripts/validate-data.js imports external npm packages (not standard library)');
+  }
+  return errors;
+}
+
+/**
+ * SI-73: validate-data.js exit code semantics are fail-closed
+ *
+ * PASS: process.exit(0), FAIL: non-zero exit.
+ */
+function checkSemanticInvariant73(baseDir) {
+  var errors = [];
+  var scriptPath = path.join(baseDir, 'scripts/validate-data.js');
+  if (!fs.existsSync(scriptPath)) return errors;
+  var content = fs.readFileSync(scriptPath, 'utf8');
+  if (!/process\.exit\(\s*0\s*\)/.test(content)) {
+    errors.push('SI-73: scripts/validate-data.js missing process.exit(0) for PASS');
+  }
+  if (!/process\.exit\(\s*[1-9]/.test(content)) {
+    errors.push('SI-73: scripts/validate-data.js missing non-zero exit for FAIL');
+  }
+  return errors;
+}
+
+/**
+ * SI-74: SC-DATA-01..12 scenarios exist and are properly numbered
+ */
+function checkSemanticInvariant74(baseDir) {
+  var errors = [];
+  var scenarioPath = path.join(baseDir, 'ai-pm-os/scenarios/scenarios.md');
+  if (!fs.existsSync(scenarioPath)) {
+    errors.push('SI-74: scenarios.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(scenarioPath, 'utf8');
+  var missing = [];
+  for (var i = 1; i <= 12; i++) {
+    var padded = ('0' + i).slice(-2);
+    // Match SC-DATA-XX in any heading context (e.g., ## 123. SC-DATA-01：...)
+    if (content.indexOf('SC-DATA-' + padded) === -1) {
+      missing.push('SC-DATA-' + padded);
+    }
+  }
+  if (missing.length > 0) {
+    errors.push('SI-74: Missing SC-DATA scenarios: ' + missing.join(', '));
+  }
+  return errors;
+}
+
+/**
+ * SI-75: PACKAGE_MANIFEST.md references json-data-contract-rules.md and updated scenario count
+ */
+function checkSemanticInvariant75(baseDir) {
+  var errors = [];
+  var manifestPath = path.join(baseDir, 'ai-pm-os/PACKAGE_MANIFEST.md');
+  if (!fs.existsSync(manifestPath)) {
+    errors.push('SI-75: PACKAGE_MANIFEST.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(manifestPath, 'utf8');
+  if (content.indexOf('json-data-contract-rules.md') === -1) {
+    errors.push('SI-75: json-data-contract-rules.md not registered in PACKAGE_MANIFEST.md');
+  }
+  if (content.indexOf('134') === -1) {
+    errors.push('SI-75: PACKAGE_MANIFEST.md scenario count not updated to 134');
+  }
+  return errors;
+}
+
+/**
+ * SI-76: SKILL.md references json-data-contract-rules.md and updated scenario count
+ */
+function checkSemanticInvariant76(baseDir) {
+  var errors = [];
+  var skillPath = path.join(baseDir, 'ai-pm-os/SKILL.md');
+  if (!fs.existsSync(skillPath)) {
+    errors.push('SI-76: SKILL.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(skillPath, 'utf8');
+  if (content.indexOf('json-data-contract-rules.md') === -1) {
+    errors.push('SI-76: SKILL.md does not reference json-data-contract-rules.md');
+  }
+  if (content.indexOf('SC-DATA') === -1) {
+    errors.push('SI-76: SKILL.md does not list SC-DATA scenarios');
+  }
+  if (content.indexOf('134') === -1) {
+    errors.push('SI-76: SKILL.md scenario count not updated to 134');
+  }
+  return errors;
+}
+
+/**
+ * SI-77: 07_DATA/schemas/ has no orphan schemas
+ *
+ * Every schema must have a corresponding data file.
+ */
+function checkSemanticInvariant77(baseDir) {
+  var errors = [];
+  var schemaDir = path.join(baseDir, '07_DATA/schemas');
+  if (!fs.existsSync(schemaDir)) return errors;
+  var dataDir = path.join(baseDir, '07_DATA');
+  var schemaFiles = fs.readdirSync(schemaDir).filter(function(f) { return f.endsWith('.json'); });
+  var orphans = [];
+  for (var i = 0; i < schemaFiles.length; i++) {
+    var dataFile = schemaFiles[i].replace('.schema.json', '.json');
+    if (!fs.existsSync(path.join(dataDir, dataFile))) {
+      orphans.push(schemaFiles[i]);
+    }
+  }
+  if (orphans.length > 0) {
+    errors.push('SI-77: Orphan schemas (no matching data file): ' + orphans.join(', '));
+  }
+  return errors;
+}
+
+/**
+ * SI-78: Scenario heading numbers are sequential from ## 1 to ## 134
+ *
+ * Verifies no gaps, no duplicates, and all headings within range.
+ */
+function checkSemanticInvariant78(baseDir) {
+  var errors = [];
+  var scenarioPath = path.join(baseDir, 'ai-pm-os/scenarios/scenarios.md');
+  if (!fs.existsSync(scenarioPath)) {
+    errors.push('SI-78: scenarios.md not found');
+    return errors;
+  }
+  var content = fs.readFileSync(scenarioPath, 'utf8');
+  var lines = content.split('\n');
+  var headingNums = [];
+  var headingRe = /^##\s+(\d+)/;
+  for (var i = 0; i < lines.length; i++) {
+    var m = lines[i].match(headingRe);
+    if (m) headingNums.push(parseInt(m[1], 10));
+  }
+  var seen = {};
+  var dupes = [];
+  for (var j = 0; j < headingNums.length; j++) {
+    if (seen[headingNums[j]]) dupes.push(headingNums[j]);
+    seen[headingNums[j]] = true;
+  }
+  if (dupes.length > 0) {
+    errors.push('SI-78: Duplicate heading numbers: ' + dupes.join(', '));
+  }
+  for (var k = 0; k < headingNums.length; k++) {
+    var vn = headingNums[k];
+    if (vn < 1 || vn > EXPECTED_SCENARIO_COUNT) {
+      errors.push('SI-78: Heading ' + vn + ' outside range 1..' + EXPECTED_SCENARIO_COUNT);
+    }
+  }
+  return errors;
+}
+
+
 /**
  * SI-59: agile-reporting-rules.md is covered by REQUIRED_FILES
  *
@@ -5240,7 +5532,18 @@ function main() {
   const si64 = checkSemanticInvariant64(baseDir);
   const si65 = checkSemanticInvariant65(baseDir);
   const si67 = checkSemanticInvariant67(baseDir);
-  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32, ...si33, ...si34, ...si35, ...si36, ...si37, ...si38, ...si39, ...si40, ...si41, ...si42, ...si43, ...si44, ...si45, ...si46, ...si47, ...si48, ...si49, ...si50, ...si51, ...si52, ...si53, ...si54, ...si55, ...si56, ...si57, ...si58, ...si59, ...si60, ...si61, ...si62, ...si63, ...si64, ...si65, ...si67);
+  const si68 = checkSemanticInvariant68(baseDir);
+  const si69 = checkSemanticInvariant69(baseDir);
+  const si70 = checkSemanticInvariant70(baseDir);
+  const si71 = checkSemanticInvariant71(baseDir);
+  const si72 = checkSemanticInvariant72(baseDir);
+  const si73 = checkSemanticInvariant73(baseDir);
+  const si74 = checkSemanticInvariant74(baseDir);
+  const si75 = checkSemanticInvariant75(baseDir);
+  const si76 = checkSemanticInvariant76(baseDir);
+  const si77 = checkSemanticInvariant77(baseDir);
+  const si78 = checkSemanticInvariant78(baseDir);
+  siErrors.push(...si01, ...si02, ...si03, ...si04, ...si05, ...si06, ...si07, ...si08, ...si09, ...si10, ...si11, ...si12, ...si13, ...si14, ...si15, ...si16, ...si17, ...si18, ...si19, ...si20, ...si21, ...si22, ...si23, ...si24, ...si25, ...si26, ...si27, ...si28, ...si29, ...si30, ...si31, ...si32, ...si33, ...si34, ...si35, ...si36, ...si37, ...si38, ...si39, ...si40, ...si41, ...si42, ...si43, ...si44, ...si45, ...si46, ...si47, ...si48, ...si49, ...si50, ...si51, ...si52, ...si53, ...si54, ...si55, ...si56, ...si57, ...si58, ...si59, ...si60, ...si61, ...si62, ...si63, ...si64, ...si65, ...si67, ...si68, ...si69, ...si70, ...si71, ...si72, ...si73, ...si74, ...si75, ...si76, ...si77, ...si78);
   if (siErrors.length === 0) {
     console.log('  OK: SI-01 (framework auto-selection) PASS');
     console.log('  OK: SI-02 (atomic PU apply) PASS');
@@ -5308,6 +5611,17 @@ function main() {
     console.log('  OK: SI-64 (Scope Conflict §7-bounded + Gap/PU rules) PASS');
     console.log('  OK: SI-65 (Fail-Closed §8-bounded + reverse-semantic detection) PASS');
     console.log('  OK: SI-67 (SC-AGR-06 Allow/Forbid semantic correctness) PASS');
+    console.log('  OK: SI-68 (json-data-contract-rules.md in REQUIRED_FILES) PASS');
+    console.log('  OK: SI-69 (json-data-contract-rules.md defines all 26/26 JSON files + authority direction) PASS');
+    console.log('  OK: SI-70 (all 26 schema files exist) PASS');
+    console.log('  OK: SI-71 (all schemas are parseable JSON) PASS');
+    console.log('  OK: SI-72 (validate-data.js exists, standard library only) PASS');
+    console.log('  OK: SI-73 (validate-data.js exit code semantics fail-closed) PASS');
+    console.log('  OK: SI-74 (SC-DATA-01..12 scenarios exist) PASS');
+    console.log('  OK: SI-75 (PACKAGE_MANIFEST.md registers new rules) PASS');
+    console.log('  OK: SI-76 (SKILL.md references new rules and SC-DATA) PASS');
+    console.log('  OK: SI-77 (no orphan schemas) PASS');
+    console.log('  OK: SI-78 (scenario headings sequential 1..134) PASS');
   } else {
     for (const e of siErrors) {
       console.log('  SEMANTIC VIOLATION: ' + e);

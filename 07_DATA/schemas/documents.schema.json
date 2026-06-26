@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "documents",
+  "description": "Project document registry",
+  "type": "object",
+  "properties": {
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["document_id", "title", "status"],
+        "properties": {
+          "document_id": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "string", "enum": ["draft", "review", "approved", "archived"] },
+          "version": { "type": "string" },
+          "owner": { "type": "string" }
+        }
+      }
+    }
+  }
+}

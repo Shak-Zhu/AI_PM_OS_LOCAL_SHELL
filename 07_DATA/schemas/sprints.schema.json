@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "sprints",
+  "description": "Sprint backlog",
+  "type": "object",
+  "properties": {
+    "current_sprint": { "type": "string" },
+    "sprints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sprint_id", "name", "start_date", "end_date", "status"],
+        "properties": {
+          "sprint_id": { "type": "string" },
+          "name": { "type": "string" },
+          "start_date": { "type": "string" },
+          "end_date": { "type": "string" },
+          "status": { "type": "string", "enum": ["planned", "active", "completed"] },
+          "committed_points": { "type": "number" },
+          "completed_points": { "type": "number" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "actions",
+  "description": "Meeting action items from meeting_minutes",
+  "type": "object",
+  "properties": {
+    "actions": {
+      "type": "array",
+      "description": "Array of action items",
+      "items": {
+        "type": "object",
+        "required": [
+          "action_id",
+          "description",
+          "owner",
+          "due_date",
+          "status"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "description": "Unique action identifier"
+          },
+          "description": {
+            "type": "string",
+            "description": "Action description"
+          },
+          "owner": {
+            "type": "string",
+            "description": "Responsible person"
+          },
+          "due_date": {
+            "type": "string",
+            "description": "Due date YYYY-MM-DD"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "completed",
+              "cancelled"
+            ],
+            "description": "Action status"
+          },
+          "source_meeting": {
+            "type": "string",
+            "description": "Source meeting file"
+          }
+        }
+      }
+    }
+  }
+}

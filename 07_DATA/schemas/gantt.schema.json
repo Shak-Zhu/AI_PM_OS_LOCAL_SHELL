@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "gantt",
+  "description": "Gantt chart task data",
+  "type": "object",
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["task_id", "name", "start_date", "end_date", "status"],
+        "properties": {
+          "task_id": { "type": "string" },
+          "name": { "type": "string" },
+          "start_date": { "type": "string" },
+          "end_date": { "type": "string" },
+          "status": { "type": "string", "enum": ["not_started", "in_progress", "completed", "delayed"] },
+          "owner": { "type": "string" }
+        }
+      }
+    },
+    "status": { "type": "string" },
+    "reason": { "type": "string" }
+  }
+}

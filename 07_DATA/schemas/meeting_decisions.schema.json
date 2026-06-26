@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "meeting_decisions",
+  "description": "Meeting decisions (deduped)",
+  "type": "object",
+  "properties": {
+    "meeting_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["decision_id", "description"],
+        "properties": {
+          "decision_id": { "type": "string" },
+          "description": { "type": "string" },
+          "decided_by": { "type": "string" },
+          "date": { "type": "string" }
+        }
+      }
+    }
+  }
+}
