@@ -12,6 +12,8 @@
         "properties": {
           "role_id": { "type": "string" },
           "role_name": { "type": "string" },
+          "owner": { "type": "string" },
+          "status": { "type": "string" },
           "default_or_optional": { "type": "string", "enum": ["default", "optional"] },
           "description": { "type": "string" }
         }

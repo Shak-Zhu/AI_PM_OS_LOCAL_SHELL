@@ -1,3 +1,76 @@
 {
-  "roles": []
+  "roles": [
+    {
+      "role_id": "PM Owner",
+      "role_name": "PM Owner",
+      "owner": "INITIALIZE_PROJECT",
+      "status": "template",
+      "default_or_optional": "default",
+      "description": "项目日常治理与交付协调"
+    },
+    {
+      "role_id": "Human Owner",
+      "role_name": "Human Owner",
+      "owner": "INITIALIZE_PROJECT",
+      "status": "template",
+      "default_or_optional": "default",
+      "description": "最终人工责任与验收"
+    },
+    {
+      "role_id": "PM Reviewer",
+      "role_name": "PM Reviewer",
+      "owner": "INITIALIZE_PROJECT",
+      "status": "template",
+      "default_or_optional": "default",
+      "description": "PM 文件审核"
+    },
+    {
+      "role_id": "Sponsor Approver",
+      "role_name": "Sponsor Approver",
+      "owner": "INITIALIZE_PROJECT",
+      "status": "template",
+      "default_or_optional": "default",
+      "description": "范围、重大变更、里程碑和上线审批"
+    },
+    {
+      "role_id": "Product Owner",
+      "role_name": "Product Owner",
+      "owner": "INITIALIZE_PROJECT",
+      "status": "template",
+      "default_or_optional": "optional",
+      "description": "需求价值和优先级"
+    },
+    {
+      "role_id": "Tech Owner",
+      "role_name": "Tech Owner",
+      "owner": "INITIALIZE_PROJECT",
+      "status": "template",
+      "default_or_optional": "optional",
+      "description": "技术交付责任"
+    },
+    {
+      "role_id": "Business Owner",
+      "role_name": "Business Owner",
+      "owner": "INITIALIZE_PROJECT",
+      "status": "template",
+      "default_or_optional": "optional",
+      "description": "业务价值与业务验收"
+    },
+    {
+      "role_id": "Agile Owner",
+      "role_name": "Agile Owner",
+      "owner": "INITIALIZE_PROJECT",
+      "status": "template",
+      "default_or_optional": "optional",
+      "description": "敏捷节奏与治理"
+    },
+    {
+      "role_id": "UAT Owner",
+      "role_name": "UAT Owner",
+      "owner": "INITIALIZE_PROJECT",
+      "status": "template",
+      "default_or_optional": "optional",
+      "description": "UAT 最终确认"
+    }
+  ]
 }

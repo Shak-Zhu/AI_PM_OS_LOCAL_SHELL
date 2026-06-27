@@ -199,12 +199,41 @@ node scripts/verify-release.js
 
 ---
 
-## 7. 验证命令参考
+## 7. P0 Governance Evidence Gate
+
+> **重要说明**：本 Gate 不替代 macOS 真实环境验证，不关闭 REQ-029。
+
+### 7.1 验证 P0 治理证据
+
+```bash
+node scripts/verify-governance.js
+# 期望：RESULT: PASS，退出码 0
+```
+
+### 7.2 覆盖的需求
+
+| 需求 | 说明 |
+|---|---|
+| REQ-004 | Markdown 权威项目文件 |
+| REQ-005 | Pending Updates 审批机制 |
+| REQ-006 | 角色配置与可拆分审批 |
+| REQ-007 | 统一命名与 ID 系统 |
+| REQ-008 | 输入材料登记与归档 |
+| REQ-028 | Git checkpoint 与可追溯提交 |
+
+### 7.3 REQ-029 状态
+
+> **REQ-029 not closed** — macOS 真实环境验证尚未执行。
+
+---
+
+## 8. 验证命令参考
 
 | 命令 | 期望结果 |
 |---|---|
+| `node scripts/verify-governance.js` | RESULT: PASS |
 | `node scripts/verify-release.js` | RESULT: PASS |
-| `node ai-pm-os/scripts/validate-skill.js` | RESULT: PASS（full-host） |
+| `node ai-pm-os/scripts/validate-skill.js` | RESULT: PASS |
 | `node scripts/validate-skill.js` | RESULT: PASS |
 | `node scripts/check-pollution.js` | RESULT: PASS |
 | `node scripts/validate-data.js` | RESULT: PASS |
@@ -255,7 +284,8 @@ node scripts/sync-data.js
 | `ai-pm-os/PACKAGE_MANIFEST.md` | 包边界与依赖契约 |
 | `ai-pm-os/references/install-and-invoke.md` | 安装与调用详细说明 |
 | `ai-pm-os/scripts/validate-skill.js` | 包内验证入口（零依赖） |
-| `scripts/validate-skill.js` | 仓库 QA 包装器 |
-| `scripts/check-pollution.js` | 仓库污染检查 |
+| `scripts/verify-governance.js` | P0 治理验证脚本 |
 | `scripts/verify-release.js` | 发布验证脚本 |
+| `scripts/check-pollution.js` | 仓库污染检查 |
+| `P0_GOVERNANCE_EVIDENCE.md` | P0 治理证据矩阵 |
 | `RELEASE_CHECKLIST.md` | 本文件 |
