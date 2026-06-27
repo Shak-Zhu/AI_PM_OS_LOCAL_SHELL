@@ -34,6 +34,10 @@ node scripts/verify-release.js
 
 **[USER_GUIDE.md](USER_GUIDE.md)**
 
+排版版使用手册：
+
+**[AI_PM_OS_Local_Shell_User_Guide.pdf](AI_PM_OS_Local_Shell_User_Guide.pdf)**
+
 ## 关键边界
 
 - Markdown 是项目事实权威源，JSON 是同步和展示层。
