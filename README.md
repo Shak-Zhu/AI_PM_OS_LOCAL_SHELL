@@ -38,7 +38,7 @@ node scripts/verify-release.js
 
 - Markdown 是项目事实权威源，JSON 是同步和展示层。
 - 未批准更新先进入 `PM_PENDING_UPDATES.md`。
-- `_DEV_PROJECT_CONTROL/` 是本产品开发时的治理空间，被产品 Git 忽略，不会进入干净 clone。
+- Coder Work Package 仅用于明确启用 AI Coder 委派的软件交付场景，不是所有项目的默认流程。
 - 新项目应使用独立 Git 历史或把本仓库 remote 改名为 `upstream`。
 - 不自动 push，不自动把未确认内容写成正式 Decision 或 Approved Baseline。
 

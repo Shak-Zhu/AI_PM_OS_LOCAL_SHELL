@@ -91,16 +91,11 @@ PROJECT_NAME/
 
 禁止从 JSON 反向覆盖 Approved Markdown。
 
-### 2.3 `_DEV_PROJECT_CONTROL/` 边界
+### 2.3 项目实例边界
 
-原产品开发目录可能存在 `_DEV_PROJECT_CONTROL/`，但该目录：
-
-- 被产品 Git 忽略
-- 不会进入 GitHub Shell 仓库
-- 不会出现在全新 clone 中
-- 不属于新项目的项目文件
-
-从 GitHub clone 得到的是干净壳。
+从 Shell 仓库 clone 得到的是可初始化的项目模板。新项目只维护自己的项目
+事实、审批、报告、敏捷数据和 Git 历史，不需要了解或承载 AI PM OS 产品的
+开发过程记录。
 
 ---
 
@@ -222,19 +217,11 @@ git status --short
 
 预期无输出。
 
-Windows：
-
-```powershell
-Test-Path _DEV_PROJECT_CONTROL
-```
-
-预期 `False`。
-
-macOS/Linux：
-
 ```bash
-test ! -d _DEV_PROJECT_CONTROL && echo clean
+node scripts/check-pollution.js
 ```
+
+预期输出 `RESULT: PASS - Product shell is clean.`。
 
 ---
 
@@ -283,7 +270,11 @@ test ! -d _DEV_PROJECT_CONTROL && echo clean
 - `07_DATA/project_state.json`
 - `07_DATA/project_roles.json`
 
-Scope Baseline 未明确批准前，不应生成正式 WBS 或正式 Coder Work Package。
+Scope Baseline 未明确批准前，不应生成正式 WBS。
+
+只有在当前项目属于软件交付、Human Owner 明确启用 Cursor/Codex Coder 委派，
+并要求 AI PM 拆分实现任务时，才生成 Coder Work Package。普通业务、运营、
+咨询或纯治理项目不需要该流程。
 
 ---
 
@@ -733,14 +724,18 @@ git log --oneline HEAD..upstream/main
 禁止猜测。正式更新先生成Pending Updates。
 ```
 
-签发工作包：
+可选：向 AI Coder 签发软件实现工作包：
 
 ```text
+当前项目已启用AI Coder委派。
 根据Approved Scope和WBS签发Coder Work Package。
 必须包含Required Project Files、scope_in、scope_out、Allowed Files、
 Acceptance Criteria、验证命令、禁止项和报告要求。
 同时写入文件并在聊天中输出完整可复制正文。
 ```
+
+未明确启用 AI Coder 委派时，使用 `PM_ACTIVE_WBS.md`、Action、里程碑、
+Backlog 和 Sprint 管理交付，不创建 Coder Work Package 或 PM/QC 代码审查记录。
 
 ---
 

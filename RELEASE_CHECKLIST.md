@@ -173,7 +173,7 @@ node ai-pm-os/scripts/validate-skill.js
 
 **仓库级 QA**：
 Git URL 安装后，以下命令需要用户额外复制根目录 `scripts/`：
-- `scripts/check-pollution.js` — 仓库污染检查（需要访问 `_DEV_PROJECT_CONTROL/`）
+- `scripts/check-pollution.js` — 完整项目壳污染检查
 - `scripts/validate-data.js` — JSON 数据验证
 
 ---
@@ -184,7 +184,6 @@ Git URL 安装后，以下命令需要用户额外复制根目录 `scripts/`：
 
 | 排除项 | 说明 |
 |---|---|
-| `_DEV_PROJECT_CONTROL/` | PM/AI 治理控制文件，仅开发期间使用 |
 | `.git/` | Git 版本控制目录 |
 | `node_modules/` | 依赖包（各项目独立安装） |
 | `dist/` | 构建产物（Dashboard） |

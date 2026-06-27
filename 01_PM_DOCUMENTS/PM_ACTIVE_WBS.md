@@ -6,4 +6,7 @@
 
 暂无进行中工作包，等待 `PM_SCOPE_BASELINE.md` 获得 Human Owner 批准。
 
-禁止在此状态下创建正式 WBS、Sprint Commitment 或 Coder Work Package。
+禁止在此状态下创建正式 WBS 或 Sprint Commitment。
+
+Coder Work Package 是可选的软件交付委派制品，仅在 Human Owner 明确启用
+AI Coder 委派后使用；普通项目不创建该类制品。

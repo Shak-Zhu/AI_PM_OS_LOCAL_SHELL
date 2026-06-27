@@ -16,7 +16,8 @@
 ## 当前阻塞与门禁
 
 1. 项目尚未初始化。调用 `ai-pm-os 初始化项目` 开始。
-2. Scope Baseline 未批准前，不得创建正式 WBS 或正式 Coder Work Package。
+2. Scope Baseline 未批准前，不得创建正式 WBS。
+3. 只有 Human Owner 明确启用 AI Coder 委派后，才允许创建 Coder Work Package。
 
 ## 下一步
 

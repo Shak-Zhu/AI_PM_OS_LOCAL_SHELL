@@ -53,7 +53,8 @@
 - Markdown 是权威源，JSON 是可视化同步层。
 - 不得把未确认内容写成已确认事实或 Decision。
 - 关键更新先进入 `PM_PENDING_UPDATES.md` 并请求 Human Owner 批准。
-- Scope Baseline 未批准前，不得创建正式 WBS 或正式 Coder Work Package。
+- Scope Baseline 未批准前，不得创建正式 WBS。
+- Coder Work Package 仅在 Human Owner 明确启用 AI Coder 委派的软件交付场景中创建。
 - 不得覆盖 Approved Baseline；变更必须进入 Change Log。
 - 不得编造无法读取的输入内容。
 - 不自动 push；Git commit 不得混入用户无关修改。

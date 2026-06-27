@@ -246,40 +246,22 @@ JSON 数据主副本文件夹。所有文件初始化为空数组或 null 值。
 | `README.md` | 项目说明 | 模板 |
 | `.gitattributes` | Git 属性 | 模板 |
 
-## 控制空间与 Git 边界
+## 干净壳与 Git 边界
 
-本产品仓库采用双 Git 空间结构，明确区分产品壳与开发治理空间。
-
-### 目录边界
-
-```text
-AI_PM_OS_LOCAL_SHELL/            # Cursor/Codex 打开的工作目录
-├── .git/                        # 外层产品 Git（仅跟踪可交付壳）
-├── .gitignore                   # 忽略 /_DEV_PROJECT_CONTROL/
-├── _DEV_PROJECT_CONTROL/        # 私有开发治理空间（不在产品 Git 中）
-│   ├── .git/                    # 独立治理 Git（单独提交）
-│   ├── 00_PM_MEMORY/            # 当前状态、审批、索引
-│   ├── 01_PM_DOCUMENTS/         # 需求、范围、RAID、Decision、Change、WBS
-│   ├── pm-ai-work-packages/    # Cursor 权威工作包与结果
-│   └── pm-ai-reviews/           # PM/QC 报告
-├── _AI_GLOBAL_MEMORY/           # 产品壳通用规则模板
-├── 00_PM_MEMORY/                # 产品壳通用项目记忆模板
-├── 01_PM_DOCUMENTS/             # 产品壳通用 PM 模板
-└── ...
-```
+本仓库只交付可复制的项目壳。每次 clone 后，用户应将其初始化为独立项目，
+并维护该项目自己的 Git 历史。
 
 ### 边界规则
 
-1. **外层产品 Git**（`.git/`）仅跟踪可交付产品壳文件，不包含 `_DEV_PROJECT_CONTROL/`。
-2. **根 `.gitignore`** 必须通过 `/_DEV_PROJECT_CONTROL/` 规则忽略整个治理空间。
-3. **`_DEV_PROJECT_CONTROL/`** 使用独立的 `.git/` 目录，单独维护治理记录。
-4. **不得**将治理文件 stage、commit、复制或链接进外层产品 Git。
-5. 污染检查脚本 `scripts/check-pollution.js` 扫描时跳过 `_DEV_PROJECT_CONTROL/` 目录。
+1. 产品壳 Git 只跟踪本清单列出的模板、Skill、脚本、Dashboard 和空数据文件。
+2. 新项目不得包含 AI PM OS 产品开发期间的需求、工作包、审查报告或真实项目事实。
+3. 未初始化字段必须使用 `INITIALIZE_PROJECT`、`YYYY-MM-DD`、`TBD` 或空数组等占位值。
+4. 实际项目内容不得 push 回产品壳模板仓库。
 
 ### 发布边界
 
 - 发布物必须来自外层 Git `clone`、`git archive` 或 clean export。
-- 不得直接复制当前开发工作目录作为发布包。
+- 不得把未跟踪文件、依赖、构建产物或本机临时文件混入发布包。
 - 发布前必须运行 `scripts/check-pollution.js` 验证无污染。
 
 ## 污染检查
@@ -291,7 +273,6 @@ AI_PM_OS_LOCAL_SHELL/            # Cursor/Codex 打开的工作目录
 - `.git/`：Git 元数据
 - `node_modules/`：依赖包
 - `scripts/`：检查器自身工具代码
-- `_DEV_PROJECT_CONTROL/`：私有开发治理空间
 
 `README.md` 允许包含产品名称 "AI PM OS Local Shell" 作为合法标识，不视为开发治理污染。
 
@@ -300,4 +281,4 @@ AI_PM_OS_LOCAL_SHELL/            # Cursor/Codex 打开的工作目录
 | 版本 | 日期 | 说明 |
 |---|---|---|
 | v0.1 | YYYY-MM-DD | 初始产品壳版本 |
-| v0.2 | YYYY-MM-DD | 增加控制空间与 Git 边界说明、发布边界规则 |
+| v0.2 | YYYY-MM-DD | 增加干净壳、Git 与发布边界规则 |

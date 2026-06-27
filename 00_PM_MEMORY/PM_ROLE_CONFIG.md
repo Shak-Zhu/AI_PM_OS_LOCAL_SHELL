@@ -23,6 +23,8 @@
 ## 角色边界
 
 - Human Owner 不可被 AI 绕过。
-- PM AI 维护治理制品、签发工作包和执行 QC，不直接承担产品代码实现。
-- Coder AI 只依据已批准工作包执行。
+- PM AI 维护项目治理制品，不直接承担项目交付实现。
+- 只有 Human Owner 明确启用 AI Coder 委派时，PM AI 才签发 Coder Work Package 并执行相应 QC。
+- 未启用 AI Coder 委派时，不创建 Coder Work Package 或 PM/QC 代码审查记录。
+- 启用后，Coder AI 只依据已授权工作包执行，不得自行改变 Approved Scope。
 - 审批可拆分：同一工作包可由不同角色分别审批不同维度，审批状态独立追踪。

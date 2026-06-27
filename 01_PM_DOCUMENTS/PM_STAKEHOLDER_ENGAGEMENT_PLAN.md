@@ -11,7 +11,7 @@
 1. Human Owner/Sponsor：Manage Closely，所有基线和重大变更审批
 2. Tech Owner：在指定后参与估算、架构、平台和发布门
 3. Product/UAT Owner：参与需求与验收
-4. Coder AI：通过 Coder Work Package 获取最小必要上下文
+4. Coder AI（仅在 Human Owner 启用 AI Coder 委派时）：通过 Coder Work Package 获取最小必要上下文
 
 ## 参与策略
 
