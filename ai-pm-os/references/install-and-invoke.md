@@ -48,6 +48,10 @@
 
 将 `ai-pm-os/` 目录（或其所在的独立 Git Repository）作为 Skill 安装源。
 
+独立仓库根目录包含 `ai-pm-os/` 子目录；该子目录直接包含 `SKILL.md`、
+`PACKAGE_MANIFEST.md`、`references/`、`scenarios/` 和 `scripts/`。
+Git URL 安装时应明确指定 `ai-pm-os/` 子目录。
+
 ### 2.1 仅包文件布局（Git URL 安装）
 
 ```text
@@ -75,6 +79,16 @@ ai-pm-os/                         # Skill 包（独立可发布）
 1. 将 `ai-pm-os/SKILL.md` 路径加入 Cursor/Codex 的 skill 索引。
 2. 使用 `/ai-pm-os` 前缀或等价的自然语言意图。
 3. 平台不支持原生命令时，按 §4 约定调用方式执行。
+
+推荐给安装 Agent 的完整指令：
+
+```text
+请从 https://github.com/Shak-Zhu/AI_PM_OS_SKILL/tree/main/ai-pm-os 安装 ai-pm-os Skill。
+Skill 位于仓库的 ai-pm-os/ 子目录。必须完整安装 SKILL.md、PACKAGE_MANIFEST.md、
+references、scenarios 和 scripts，不得只复制 SKILL.md。
+安装后运行 node ai-pm-os/scripts/validate-skill.js；退出码必须为0并报告实际安装路径。
+完成后提醒我重启Agent。
+```
 
 ### 2.3 验证
 
