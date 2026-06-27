@@ -1,82 +1,55 @@
 # AI PM OS Local Shell
 
-可复制的本地 AI 项目管理壳系统。使用 Cursor 或 Codex 打开，配合统一 `ai-pm-os` Skill 进行项目管理。
+AI PM OS Local Shell 是一个可复制、可重命名、可本地运行的 AI 项目管理壳。
+使用 Cursor 或 Codex 打开项目目录，由统一的 `ai-pm-os` Skill 维护 Markdown
+项目文件、JSON 数据、敏捷对象、报告和本地 Dashboard。
 
-## Skill 核心定位
+## 当前发布状态
 
-`ai-pm-os` 是本产品的核心执行引擎，不是普通 prompt、写作助手或命令集合。
-它的角色是"资深项目经理"——精通 PMP/PMBOK、PRINCE2、APM、PMO、Scrum、
-Kanban、Hybrid 七类专业治理框架，能在项目生命周期的每个阶段做出可验证
-的判断与处置。
+- M1 / P0：31/31 Human Accepted。
+- 当前产品提交：`ecfecf1`。
+- Windows、Cursor、Codex、Skill 隔离包、JSON、Dashboard 和 Git 发布流程已验证。
+- macOS 保持跨平台设计，但尚未进行真实设备验证；该项列入 P1 `REQ-036`。
+- 后续 P1/P2 能力不属于当前 M1 完成范围。
 
-Skill 必须满足：
+## 三个核心组成
 
-- **专业性**：任何输出必须显式引用所选用的专业框架组合与判断依据。
-- **稳定性**：同输入同状态下重复执行结果结构一致；中断后可恢复。
-- **可追溯性**：每项正式更新可追溯到输入、Pending Update、批准人和 Git 证据。
-- **跨 Agent 一致性**：Cursor 与 Codex 在相同 shell + 输入 + 状态下产生
-  字段集 / 引用一致的结构化输出。
+1. `ai-pm-os/`：完整、自包含的 AI PM Skill。
+2. 项目壳目录：Markdown、JSON、敏捷、会议、To-do、报告和材料归档结构。
+3. `06_DASHBOARD/`：本地 React/Vite 项目管理 Dashboard。
 
-Skill 源码包位于 `ai-pm-os/`，包含：
+## 快速开始
 
-- `ai-pm-os/SKILL.md`：入口、强制执行循环、能力标签、失败与升级。
-- `ai-pm-os/references/`：框架适用边界、路由、事实层级、稳定性规则、
-  安装与调用。
-- `ai-pm-os/scenarios/scenarios.md`：22 个 Given/When/Then 行为场景。
-
-手动安装与调用边界：
-
-- 当前为源码骨架，未提供原生 Skill 注册；用户需将 `ai-pm-os/` 路径加入
-  Cursor / Codex 的工作区或上下文。
-- 调用方式：`/ai-pm-os <意图>` 或与之等价的自然语言。
-- 验证：`node scripts/validate-skill.js` 与 `node scripts/check-pollution.js`。
-
-## 当前未实现范围
-
-以下能力在 WP-002 交付时**不**实现，列入后续工作包（WP-003~016）：
-
-- 完整材料处理、会议 transcript、To-do、报告、敏捷数据流。
-- PM Audit、Takeover 评估、Dashboard 同步、HTML PPT 生成。
-- 后台监听、云服务、数据库、多人协作。
-- 自动平台注册、原生安装包、第三方 PM 工具集成。
-
-## 核心形态
-
-用户复制一个本地项目壳文件夹，用 Cursor 或 Codex 打开，通过统一 Skill 调用 AI。AI 根据项目材料、会议 Transcript、日报素材、To-do 完成情况等内容，自动创建、更新、维护项目管理文件，并同步本地 JSON 数据，使 React/Vite Dashboard 自动展示项目状态。
-
-## 目录结构
-
-```
-PROJECT_NAME/
-├── _AI_GLOBAL_MEMORY/      # AI 全局记忆（工作规则与偏好）
-├── 00_PM_MEMORY/           # 项目运行记忆
-├── 01_PM_DOCUMENTS/        # 项目管理文档
-├── 02_AGILE/               # 敏捷文档
-├── 03_MEETINGS/            # 会议管理
-├── 04_TODO/                # To-do 管理
-├── 05_REPORTS/             # 报告归档
-├── 06_DASHBOARD/           # React/Vite Dashboard（开发后启用）
-├── 07_DATA/                # JSON 数据主副本
-├── 08_INTAKE/              # 材料输入归档
-├── 09_ARCHIVE/             # 归档
-├── AGENTS.md               # Agent 启动规则
-└── README.md
+```powershell
+git clone https://github.com/Shak-Zhu/AI_PM_OS_LOCAL_SHELL.git My_New_Project
+Set-Location My_New_Project
+npm --prefix 06_DASHBOARD install
+node scripts/verify-release.js
 ```
 
-## 平台目标
+然后使用 Cursor 或 Codex 打开 `My_New_Project`，要求 Agent 读取 `AGENTS.md`
+并使用 `ai-pm-os` 初始化项目。
 
-P0 支持 Windows 10/11 和 macOS，支持 Cursor 与 Codex 本地工作流。项目内部使用相对路径，跨平台脚本优先采用 Node.js。
+完整的克隆、改名、初始化、日常使用、Dashboard、Git、独立 Skill 仓库安装和故障排除说明：
 
-## 隐私边界
+**[USER_GUIDE.md](USER_GUIDE.md)**
 
-项目文件默认保存在本地，但 Cursor/Codex 是否把输入发送至模型服务，取决于所使用的平台、账号和隐私配置。本项目不承诺离线模型推理。
+## 关键边界
 
-## 启动使用
+- Markdown 是项目事实权威源，JSON 是同步和展示层。
+- 未批准更新先进入 `PM_PENDING_UPDATES.md`。
+- `_DEV_PROJECT_CONTROL/` 是本产品开发时的治理空间，被产品 Git 忽略，不会进入干净 clone。
+- 新项目应使用独立 Git 历史或把本仓库 remote 改名为 `upstream`。
+- 不自动 push，不自动把未确认内容写成正式 Decision 或 Approved Baseline。
+
+## 验证
 
 ```bash
-cd PROJECT_NAME
-# 使用 Cursor 或 Codex 打开
-# 调用 ai-pm-os Skill
+node scripts/verify-release.js
+node scripts/verify-governance.js
+node ai-pm-os/scripts/validate-skill.js
+node scripts/validate-data.js
+node scripts/check-pollution.js
 ```
 
-详细使用说明在 `_AI_GLOBAL_MEMORY/AI_SKILL_OPERATING_RULES.md`。
+全部命令退出码为 `0` 才可作为干净壳投入新项目。

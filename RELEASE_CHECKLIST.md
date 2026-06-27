@@ -1,5 +1,8 @@
 # AI PM OS Local Shell — M1 Release Checklist
 
+面向使用者的完整克隆、改名、初始化、Skill 安装和日常操作说明见
+`USER_GUIDE.md`。
+
 | 字段 | 内容 |
 |---|---|
 | 版本 | M1 |
