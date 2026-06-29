@@ -26,26 +26,35 @@ const DASHBOARD_DIR = path.resolve(__dirname, '..');
 const PUBLIC_DATA_DIR = path.join(DASHBOARD_DIR, 'public', 'data');
 const SOURCE_DATA_DIR = path.join(DASHBOARD_DIR, '..', '07_DATA');
 
-// Required data files the Dashboard needs to read
+// Required data files the Dashboard needs to read (P0 — all must sync)
+// This list must cover every file that App.jsx loads and Dashboard P0 modules display.
+// See WP-021 scope_in §3.
 const REQUIRED_FILES = [
   'dashboard_state.json',
   'project_state.json',
   'scope.json',
+  'milestones.json',
+  'gantt.json',
   'raid.json',
   'actions.json',
   'approvals.json',
   'sprints.json',
   'backlog.json',
+  'burndown.json',
+  'velocity.json',
+  'meetings.json',
+  'meeting_actions.json',
+  'meeting_decisions.json',
   'todo.json',
   'reports.json',
   'documents.json',
+  'progress.json',
+  'estimation.json',
+  'project_roles.json',
 ];
 
 // Optional data files (non-blocking if missing)
-const OPTIONAL_FILES = [
-  'velocity.json',
-  'burndown.json',
-];
+const OPTIONAL_FILES = [];
 
 function log(msg)   { console.log('[dashboard-sync] ' + msg); }
 function warn(msg)  { console.log('[dashboard-sync] WARN: ' + msg); }

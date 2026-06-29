@@ -2,9 +2,11 @@
  * AI PM OS Local Shell - Release Verification Script
  *
  * Verifies the product shell and ai-pm-os Skill package are correctly packaged
- * for release. This script is the canonical release gate for WP-016.
+ * for release. This script is the canonical release gate for WP-016 / WP-021.
  *
- * Usage: node scripts/verify-release.js
+ * Usage:
+ *   node scripts/verify-release.js           # Standard mode
+ *   node scripts/verify-release.js --strict  # P0 strict mode (requires Dashboard build)
  *
  * Exit codes:
  *   0 = All release checks passed
@@ -21,6 +23,9 @@ const baseDir = path.resolve(__dirname, '..');
 
 let totalErrors = 0;
 const tempDirs = [];
+
+// --strict flag: P0 release gate — requires Dashboard build/sync/smoke to pass
+const strictMode = process.argv.includes('--strict');
 
 // =============================================================================
 // UTILITY: Temp directory management
@@ -62,18 +67,25 @@ function runNode(cmd, cwd) {
 }
 
 // =============================================================================
-// CHECK 1: Required directories exist
+// CHECK 1a: Required directories exist (QC-F-183 separation)
 // =============================================================================
 
 function checkRequiredDirectories() {
-  console.log('[Check 1] Verifying required directories...');
+  console.log('[Check 1a] Verifying required directories...');
 
   const requiredDirs = [
-    'ai-pm-os',
+    '_AI_GLOBAL_MEMORY',
     '00_PM_MEMORY',
     '01_PM_DOCUMENTS',
+    '02_AGILE',
+    '03_MEETINGS',
+    '04_TODO',
+    '05_REPORTS',
     '06_DASHBOARD',
     '07_DATA',
+    '08_INTAKE',
+    '09_ARCHIVE',
+    'ai-pm-os',
     'scripts'
   ];
 
@@ -95,6 +107,52 @@ function checkRequiredDirectories() {
   }
 
   console.log('  PASS: all required directories exist');
+  return true;
+}
+
+// =============================================================================
+// CHECK 1b: Required root files exist (QC-F-183 separation)
+// Every item in INCLUDE_ITEMS that is NOT a known directory must exist.
+// =============================================================================
+
+function checkRequiredRootFiles() {
+  console.log('\n[Check 1b] Verifying required root files...');
+
+  const requiredRootFiles = [
+    'AGENTS.md',
+    'README.md',
+    'USER_GUIDE.md',
+    'PRODUCT_SHELL_MANIFEST.md',
+    'RELEASE_CHECKLIST.md',
+    'P0_GOVERNANCE_EVIDENCE.md',
+    '.gitignore',
+    '.gitattributes'
+  ];
+
+  const knownDirs = new Set([
+    '_AI_GLOBAL_MEMORY', '00_PM_MEMORY', '01_PM_DOCUMENTS', '02_AGILE',
+    '03_MEETINGS', '04_TODO', '05_REPORTS', '06_DASHBOARD', '07_DATA',
+    '08_INTAKE', '09_ARCHIVE', 'ai-pm-os', 'scripts'
+  ]);
+
+  let missing = [];
+  for (const f of requiredRootFiles) {
+    const fullPath = path.join(baseDir, f);
+    if (!fs.existsSync(fullPath)) {
+      missing.push(f);
+      console.log('  MISSING: ' + f);
+    } else {
+      console.log('  OK: ' + f + ' exists');
+    }
+  }
+
+  if (missing.length > 0) {
+    console.log('  FAIL: ' + missing.length + ' required root file(s) missing');
+    totalErrors += missing.length;
+    return false;
+  }
+
+  console.log('  PASS: all required root files exist');
   return true;
 }
 
@@ -187,9 +245,15 @@ function checkProductShellCopy() {
     ];
 
     const INCLUDE_ITEMS = [
+      // Core directories
       'AGENTS.md',
       'README.md',
+      'USER_GUIDE.md',
       'PRODUCT_SHELL_MANIFEST.md',
+      'RELEASE_CHECKLIST.md',
+      'P0_GOVERNANCE_EVIDENCE.md',
+      '.gitignore',
+      '.gitattributes',
       'ai-pm-os',
       'scripts',
       '00_PM_MEMORY',
@@ -200,20 +264,25 @@ function checkProductShellCopy() {
       '05_REPORTS',
       '06_DASHBOARD',
       '07_DATA',
+      '08_INTAKE',
+      '09_ARCHIVE',
       '_AI_GLOBAL_MEMORY'
     ];
 
     for (const item of INCLUDE_ITEMS) {
       const src = path.join(baseDir, item);
-      if (fs.existsSync(src)) {
-        const dest = path.join(tmpDir, item);
-        if (fs.statSync(src).isDirectory()) {
-          copyDirFlat(src, dest, FORBIDDEN, item);
-        } else {
-          const destDir = path.dirname(dest);
-          if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
-          fs.copyFileSync(src, dest);
-        }
+      if (!fs.existsSync(src)) {
+        console.log('  FAIL: required item missing: ' + item);
+        totalErrors++;
+        continue;
+      }
+      const dest = path.join(tmpDir, item);
+      if (fs.statSync(src).isDirectory()) {
+        copyDirFlat(src, dest, FORBIDDEN, item);
+      } else {
+        const destDir = path.dirname(dest);
+        if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+        fs.copyFileSync(src, dest);
       }
     }
 
@@ -339,10 +408,41 @@ function checkDashboard() {
     if (buildResult.exitCode === 0) {
       console.log('  OK: Dashboard build succeeded');
     } else {
-      console.log('  WARN: Dashboard build failed (exit ' + buildResult.exitCode + ')');
+      console.log('  FAIL: Dashboard build failed (exit ' + buildResult.exitCode + ')');
+      if (strictMode) totalErrors++;
+      if (strictMode) return false;
+    }
+
+    // Strict mode: also verify sync:data and smoke pass
+    if (strictMode) {
+      console.log('  INFO: --strict mode: also verifying sync:data and smoke...');
+
+      const syncResult = runNode('npm run sync:data', dashDir);
+      if (syncResult.exitCode === 0) {
+        console.log('  OK: Dashboard sync:data succeeded');
+      } else {
+        console.log('  FAIL: Dashboard sync:data failed (exit ' + syncResult.exitCode + ')');
+        totalErrors++;
+        return false;
+      }
+
+      const smokeResult = runNode('npm run smoke', dashDir);
+      if (smokeResult.exitCode === 0) {
+        console.log('  OK: Dashboard smoke succeeded');
+      } else {
+        console.log('  FAIL: Dashboard smoke failed (exit ' + smokeResult.exitCode + ')');
+        totalErrors++;
+        return false;
+      }
     }
   } else {
-    console.log('  INFO: node_modules not installed, skipping build check');
+    if (strictMode) {
+      console.log('  FAIL: node_modules not installed — --strict mode requires full Dashboard verification');
+      totalErrors++;
+      return false;
+    } else {
+      console.log('  INFO: node_modules not installed, skipping build/sync/smoke check');
+    }
   }
 
   return true;
@@ -432,11 +532,13 @@ function copyDirFlat(src, dest, forbiddenList, projectRelPrefix) {
 function main() {
   console.log('=== AI PM OS Local Shell - Release Verification ===');
   console.log('Base directory: ' + baseDir);
+  if (strictMode) console.log('Mode: --strict (P0 strict release gate)');
   console.log('');
 
   try {
     checkEnvironment();
     checkRequiredDirectories();
+    checkRequiredRootFiles();
     checkFullHostValidation();
     checkIsolatedPackageValidation();
     checkProductShellCopy();

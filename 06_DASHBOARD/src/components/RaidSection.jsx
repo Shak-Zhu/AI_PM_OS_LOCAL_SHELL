@@ -2,9 +2,11 @@ import React from 'react';
 
 function RiskItem({ item }) {
   const isHigh = item.priority === 'high' || item.risk_level === 'high' || item.severity === 'high';
+  // item_id takes priority (EXT-QC-006 fix), then risk_id, then id
+  const itemId = item.item_id || item.risk_id || item.id || '—';
   return (
     <li className={`risk-item ${isHigh ? 'risk-high' : 'risk-normal'}`}>
-      <span className="item-id">{item.id || item.risk_id || '—'}</span>
+      <span className="item-id">{itemId}</span>
       <span className="item-title">{item.title || item.description || item.risk_description || '—'}</span>
       {item.owner && <span className="item-owner">{item.owner}</span>}
       {isHigh && <span className="rag-badge rag-red">High</span>}
@@ -13,7 +15,10 @@ function RiskItem({ item }) {
 }
 
 export default function RaidSection({ data }) {
-  const items = Array.isArray(data.items) ? data.items : [];
+  // schema uses 'items' array (EXT-QC-006 fix)
+  const items = Array.isArray(data && data.items) ? data.items
+              : Array.isArray(data && data.risks) ? data.risks
+              : [];
 
   return (
     <div className="module raid-section">
@@ -33,9 +38,10 @@ export default function RaidSection({ data }) {
         </div>
         {items.length > 0 ? (
           <ul className="risk-list">
-            {items.slice(0, 5).map((item, idx) => (
-              <RiskItem key={item.id || item.risk_id || idx} item={item} />
-            ))}
+            {items.slice(0, 5).map((item, idx) => {
+              const itemId = item.item_id || item.risk_id || item.id || idx;
+              return <RiskItem key={itemId} item={item} />;
+            })}
             {items.length > 5 && <li className="risk-more">+{items.length - 5} more</li>}
           </ul>
         ) : (

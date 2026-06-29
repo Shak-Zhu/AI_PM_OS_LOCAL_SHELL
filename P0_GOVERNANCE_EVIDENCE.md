@@ -2,8 +2,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| 版本 | v1.3 |
-| 日期 | 2026-06-27 |
+| 版本 | v1.4 |
+| 日期 | 2026-06-28 |
 | 状态 | Active |
 | 对应需求 | REQ-004、REQ-005、REQ-006、REQ-007、REQ-008、REQ-028 |
 
@@ -136,3 +136,38 @@
 > - 在 macOS 运行 Git 回滚测试
 >
 > 本文件仅验证治理类需求的静态规则完整性，不替代 REQ-029 的 macOS 实测要求。
+
+---
+
+## 10. SI-14b — CHG-011 Applicability Gate 验证（WP-021-R1）
+
+> **WP-021-R1 新增 — 2026-06-28**
+
+|| 项目 | 内容 |
+|---|---|
+| **验收标准** | SI-14b 精确解析 §8 section anchor、表格结构、4 行 COC 适用性条目 |
+| **Evidence Type** | 规则存在性证据 |
+| **Evidence File** | `ai-pm-os/references/runtime-compliance-contracts.md` |
+| **Rule/Script** | `ai-pm-os/scripts/validate-skill.js` (SI-14b) |
+| **Validation Command** | `node ai-pm-os/scripts/validate-skill.js` |
+| **Status** | PASS — §8 CHG-011 Applicability Gate 通过 SI-14b 全部检查 |
+
+**SI-14b 验证项**：
+
+|| 检查项 | 验证内容 |
+|---|---|
+| SI-14b-a | `<!-- SECTION:CODER_APPLICABILITY -->` 锚点存在 |
+| SI-14b-b | `## 8. CHG-011 — AI Coder 委派 Applicability Gate` 标题存在 |
+| SI-14b-d | §8.1 适用性表格存在（`contract_id | 触发条件 | 未启用时行为`） |
+| SI-14b-e | 4 个 COC ID 各恰好出现 1 次：COC-CWP-001、COC-RWP-002、COC-PQR-003、COC-HAR-006 |
+| SI-14b-f | §8.2 fail-closed 行为：`不得创建...治理根目录/pm-ai-work-packages` |
+| SI-14b-g | Escalation：`coder-delegation-not-authorized` |
+| SI-14b-h | 授权语义不得反转（不得出现无否定前缀的"创建${GOVERNANCE_ROOT}"） |
+
+**负向测试覆盖**（WP-021-R1 隔离测试）：
+- 删除任一 COC 行 → validate-skill.js 非 0
+- 重复任一 COC 行 → validate-skill.js 非 0
+- 反转授权语义 → validate-skill.js 非 0
+- 恢复后 → validate-skill.js 退出 0
+
+**Known Gap** | 无

@@ -10,6 +10,10 @@ import TodoSection from './components/TodoSection.jsx';
 import ReportsSection from './components/ReportsSection.jsx';
 import DocumentsSection from './components/DocumentsSection.jsx';
 import MilestoneSection from './components/MilestoneSection.jsx';
+import GanttSection from './components/GanttSection.jsx';
+import MeetingSection from './components/MeetingSection.jsx';
+import ProgressSection from './components/ProgressSection.jsx';
+import EstimationSection from './components/EstimationSection.jsx';
 
 function EmptyState({ message = 'No data yet' }) {
   return (
@@ -21,6 +25,14 @@ function EmptyState({ message = 'No data yet' }) {
 }
 
 export { EmptyState };
+
+// All 21 P0 data files loaded by App.jsx (WP-021 scope §3)
+const P0_DATA_FILES = [
+  'dashboard_state', 'project_state', 'scope', 'milestones', 'gantt',
+  'raid', 'actions', 'approvals', 'sprints', 'backlog', 'burndown',
+  'velocity', 'meetings', 'meeting_actions', 'meeting_decisions',
+  'todo', 'reports', 'documents', 'progress', 'estimation', 'project_roles',
+];
 
 export default function App() {
   const [data, setData] = useState(null);
@@ -34,20 +46,15 @@ export default function App() {
         return r.json();
       })
       .then(ds => {
-        const files = [
-          'project_state', 'scope', 'raid', 'actions', 'approvals',
-          'sprints', 'backlog', 'todo', 'reports', 'documents',
-          'velocity', 'burndown',
-        ];
         return Promise.all(
-          files.map(f =>
+          P0_DATA_FILES.slice(1).map(f =>  // skip dashboard_state (already loaded)
             fetch(`./data/${f}.json`)
-              .then(r => r.ok ? r.json() : {})
-              .catch(() => ({}))
+              .then(r => r.ok ? r.json() : null)
+              .catch(() => null)
           )
         ).then(results => {
           const obj = { dashboard_state: ds };
-          files.forEach((f, i) => { obj[f] = results[i] || {}; });
+          P0_DATA_FILES.slice(1).forEach((f, i) => { obj[f] = results[i] || {}; });
           return obj;
         });
       })
@@ -91,14 +98,18 @@ export default function App() {
         <ProjectStatus data={ds} projectData={ps} />
         <ScopeSection data={data.scope} />
         <RaidSection data={data.raid} />
+        <MilestoneSection data={data.milestones} />
+        <GanttSection data={data.gantt} />
         <ActionsSection data={data.actions} />
         <ApprovalsSection data={data.approvals} />
         <SprintSection data={data.sprints} />
         <BacklogSection data={data.backlog} />
+        <MeetingSection meetings={data.meetings} meeting_actions={data.meeting_actions} meeting_decisions={data.meeting_decisions} />
+        <ProgressSection data={data.progress} />
+        <EstimationSection data={data.estimation} />
         <TodoSection data={data.todo} />
         <ReportsSection data={data.reports} />
         <DocumentsSection data={data.documents} />
-        <MilestoneSection />
       </main>
 
       <footer className="dashboard-footer">

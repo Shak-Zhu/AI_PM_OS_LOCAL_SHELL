@@ -7,7 +7,7 @@
  * 3. Core read paths (top-level fields) are accessible.
  *
  * Usage:
- *   node scripts/smoke-test.js
+ *   node scripts/smoke-test.cjs
  *
  * Exit codes:
  *   0 = All checks passed
@@ -22,33 +22,55 @@ const path = require('path');
 const DASHBOARD_DIR = path.resolve(__dirname, '..');
 const PUBLIC_DATA_DIR = path.join(DASHBOARD_DIR, 'public', 'data');
 
+// P0 required files — all must exist and parse (clean shell: null arrays are OK)
 const REQUIRED_FILES = [
   'dashboard_state.json',
   'project_state.json',
   'scope.json',
+  'milestones.json',
+  'gantt.json',
   'raid.json',
   'actions.json',
   'approvals.json',
   'sprints.json',
   'backlog.json',
+  'burndown.json',
+  'velocity.json',
+  'meetings.json',
+  'meeting_actions.json',
+  'meeting_decisions.json',
   'todo.json',
   'reports.json',
   'documents.json',
+  'progress.json',
+  'estimation.json',
+  'project_roles.json',
 ];
 
-// Minimal field checks per file: each file must have at least one of these paths accessible
+// Minimal field checks per file: each file must have at least one of these paths accessible.
+// Null/undefined is acceptable in clean shell; smoke only verifies parse + top-level access.
 const FIELD_CHECKS = {
-  'dashboard_state.json': ['rag_status', 'overall_progress', 'open_actions', 'open_risks'],
-  'project_state.json':   ['project_name', 'current_phase', 'overall_progress', 'rag_status'],
-  'scope.json':           ['scope_baseline', 'in_scope', 'out_of_scope'],
-  'raid.json':            ['items', 'source'],
-  'actions.json':         ['actions'],
-  'approvals.json':       ['approvals'],
-  'sprints.json':         ['sprints', 'current_sprint'],
-  'backlog.json':         ['backlog'],
-  'todo.json':            ['todos'],
-  'reports.json':         ['reports'],
-  'documents.json':       ['documents'],
+  'dashboard_state.json':    ['rag_status', 'overall_progress', 'open_actions', 'open_risks'],
+  'project_state.json':     ['project_name', 'current_phase', 'overall_progress', 'rag_status'],
+  'scope.json':             ['scope_baseline', 'in_scope', 'out_of_scope'],
+  'milestones.json':        ['milestones'],
+  'gantt.json':             ['tasks', 'status'],
+  'raid.json':              ['items', 'risks'],
+  'actions.json':          ['actions'],
+  'approvals.json':         ['approvals'],
+  'sprints.json':          ['sprints', 'current_sprint'],
+  'backlog.json':           ['backlog'],
+  'burndown.json':          ['sprint_id', 'total_points', 'days'],
+  'velocity.json':          ['velocity', 'sprints'],
+  'meetings.json':          ['meetings'],
+  'meeting_actions.json':   ['meeting_actions'],
+  'meeting_decisions.json': ['meeting_decisions'],
+  'todo.json':              ['todo', 'todos'],
+  'reports.json':           ['reports'],
+  'documents.json':         ['documents'],
+  'progress.json':         ['overall_progress', 'requirements_completion', 'milestones_completion', 'actions_completion', 'basis'],
+  'estimation.json':         ['estimation', 'estimates'],
+  'project_roles.json':     ['roles'],
 };
 
 function log(msg)   { console.log('[smoke] ' + msg); }

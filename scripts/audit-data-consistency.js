@@ -45,14 +45,20 @@ var SOURCE_DECLARATIONS = [
   // These are tracked by the sync script but expected to be absent in shell
   // approvals.json: PM_PENDING_UPDATES.md may not exist in shell template — optional to allow clean shell pass
   { json_file: 'approvals.json',        source_path: '00_PM_MEMORY/PM_PENDING_UPDATES.md',              source_type: 'optional',  reason: 'PU tracking — absent in clean shell template, tracked by sync' },
-  { json_file: 'documents.json',       source_path: '01_PM_DOCUMENTS/PM_DOCUMENT_REGISTRY.md',         source_type: 'optional',  reason: 'Document registry — absent in clean shell, tracked by sync' },
-  { json_file: 'meetings.json',        source_path: '03_MEETINGS/PM_MEETING_MINUTES_INDEX.md',       source_type: 'optional',  reason: 'Meeting minutes index — absent in clean shell, tracked by sync' },
-  { json_file: 'milestones.json',      source_path: '01_PM_DOCUMENTS/PM_MILESTONE_PLAN.md',          source_type: 'optional',  reason: 'Milestone plan — absent in clean shell, tracked by sync' },
+  // documents.json: from PM_DOCUMENT_REGISTRY.md (corrected per EXT-QC-005)
+  { json_file: 'documents.json',       source_path: '00_PM_MEMORY/PM_DOCUMENT_REGISTRY.md',          source_type: 'optional',  reason: 'Document registry — absent in clean shell, tracked by sync' },
+  // meetings.json: from PM_MEETING_INDEX.md (corrected per EXT-QC-005)
+  { json_file: 'meetings.json',        source_path: '03_MEETINGS/meeting_index/PM_MEETING_INDEX.md', source_type: 'optional',  reason: 'Meeting index — absent in clean shell, tracked by sync' },
+  // milestones.json: from PM_SCHEDULE_BASELINE.md milestone table (corrected per EXT-QC-005)
+  { json_file: 'milestones.json',      source_path: '01_PM_DOCUMENTS/PM_SCHEDULE_BASELINE.md',        source_type: 'optional',  reason: 'Milestone table in schedule baseline — absent in clean shell, tracked by sync' },
   { json_file: 'estimation.json',      source_path: '01_PM_DOCUMENTS/PM_ESTIMATION_LOG.md',           source_type: 'optional',  reason: 'Estimation log — absent in clean shell, tracked by sync' },
-  { json_file: 'gantt.json',          source_path: '01_PM_DOCUMENTS/PM_GANTT_CHART.md',              source_type: 'optional',  reason: 'Gantt chart — absent in clean shell, tracked by sync' },
+  // gantt.json: derived from PM_SCHEDULE_BASELINE.md (corrected per EXT-QC-005)
+  { json_file: 'gantt.json',          source_path: '01_PM_DOCUMENTS/PM_SCHEDULE_BASELINE.md',        source_type: 'optional',  reason: 'Gantt tasks in schedule baseline — absent in clean shell, tracked by sync' },
+  // raid.json: from PM_RAID_LOG.md (uses items array per EXT-QC-006)
   { json_file: 'raid.json',            source_path: '01_PM_DOCUMENTS/PM_RAID_LOG.md',                 source_type: 'optional',  reason: 'RAID log — absent in clean shell, tracked by sync' },
   { json_file: 'reports.json',         source_path: '05_REPORTS/',                                    source_type: 'optional',  reason: 'Reports directory — absent in clean shell, tracked by sync' },
-  { json_file: 'todo.json',            source_path: '04_TODO/PM_TODO_LIST.md',                        source_type: 'optional',  reason: 'TODO list — absent in clean shell, tracked by sync' },
+  // todo.json: aggregated from 04_TODO/daily/*.md (corrected per EXT-QC-005)
+  { json_file: 'todo.json',            source_path: '04_TODO/daily/',                                 source_type: 'optional',  reason: 'Daily TODO files — absent in clean shell (empty dir), tracked by sync' },
   // Generated: derived from other JSON data
   { json_file: 'dashboard_state.json',  source_path: null,                                             source_type: 'generated', reason: 'Derived from project_state.json, approvals.json' },
   // No Markdown source
@@ -166,14 +172,14 @@ function checkOrphanJsonEntries(jsonFile) {
     'approvals.json': 'approvals', 'changes.json': 'changes',
     'requirements.json': 'requirements', 'documents.json': 'documents',
     'meetings.json': 'meetings', 'milestones.json': 'milestones',
-    'raid.json': 'risks', 'backlog.json': 'backlog', 'sprints.json': 'sprints',
+    'raid.json': 'items', 'backlog.json': 'backlog', 'sprints.json': 'sprints',
     'burndown.json': 'burndown', 'velocity.json': 'velocity',
     'project_roles.json': 'roles', 'input_log.json': 'entries'
   };
 
   var idFields = ['id', '_id', 'action_id', 'decision_id', 'todo_id',
     'approval_id', 'change_id', 'req_id', 'document_id', 'meeting_id',
-    'milestone_id', 'risk_id', 'backlog_id', 'sprint_id', 'role_id', 'entry_id'];
+    'milestone_id', 'item_id', 'risk_id', 'backlog_id', 'sprint_id', 'role_id', 'entry_id'];
 
   var containerKey = arrayFields[jsonFile];
   if (!containerKey) return null;

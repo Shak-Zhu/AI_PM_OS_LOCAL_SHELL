@@ -5,8 +5,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| 版本 | M1 |
-| 日期 | 2026-06-26 |
+| 版本 | M1（WP-021 修复版） |
+| 日期 | 2026-06-28 |
 | 状态 | Ready for Installation |
 
 ---
@@ -28,8 +28,8 @@
 # 2. 进入项目根目录
 cd <PROJECT_ROOT>
 
-# 3. 验证安装
-node scripts/verify-release.js
+# 3. 验证安装（推荐 P0 strict 模式）
+node scripts/verify-release.js --strict
 
 # 4. 启动 Dashboard（如需要）
 cd 06_DASHBOARD
@@ -66,8 +66,8 @@ node ai-pm-os/scripts/validate-skill.js
 # 2. 进入项目根目录
 cd <PROJECT_ROOT>
 
-# 3. 验证安装
-node scripts/verify-release.js
+# 3. 验证安装（推荐 P0 strict 模式）
+node scripts/verify-release.js --strict
 
 # 4. 启动 Dashboard（如需要）
 cd 06_DASHBOARD
@@ -138,8 +138,8 @@ npm run build
 **验证**：
 
 ```bash
-node scripts/verify-release.js
-# 期望：RESULT: PASS
+node scripts/verify-release.js --strict
+# 期望：RESULT: PASS（P0 强验收入口）
 
 node scripts/check-pollution.js
 # 期望：RESULT: PASS - Product shell is clean.
@@ -245,9 +245,9 @@ node scripts/verify-governance.js
 
 ---
 
-## 8. 故障排除
+## 9. 故障排除
 
-### 8.1 Dashboard 构建失败
+### 9.1 Dashboard 构建失败
 
 ```bash
 cd 06_DASHBOARD
@@ -256,7 +256,7 @@ npm install
 npm run build
 ```
 
-### 8.2 Skill 验证失败
+### 9.2 Skill 验证失败
 
 ```bash
 # 检查 Node.js 版本
@@ -266,7 +266,7 @@ node --version  # 需 >= 18.x
 node ai-pm-os/scripts/validate-skill.js
 ```
 
-### 8.3 数据验证失败
+### 9.3 数据验证失败
 
 ```bash
 # 检查 07_DATA/ 文件

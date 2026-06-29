@@ -359,10 +359,20 @@ node ~/.codex/skills/ai-pm-os/scripts/validate-skill.js
 
 在目标项目根目录：
 
+**Windows PowerShell：**
+
+```powershell
+git clone https://github.com/Shak-Zhu/AI_PM_OS_SKILL.git "$env:USERPROFILE\.cursor\ai-pm-os-skill-source"
+Copy-Item -Recurse "$env:USERPROFILE\.cursor\ai-pm-os-skill-source\ai-pm-os" "$env:USERPROFILE\.cursor\skills\ai-pm-os"
+node "$env:USERPROFILE\.cursor\skills\ai-pm-os\scripts\validate-skill.js"
+```
+
+**macOS / Linux Bash：**
+
 ```bash
-git clone https://github.com/Shak-Zhu/AI_PM_OS_SKILL.git .cursor/ai-pm-os-skill-source
-cp -R .cursor/ai-pm-os-skill-source/ai-pm-os .cursor/skills/ai-pm-os
-node .cursor/skills/ai-pm-os/scripts/validate-skill.js
+git clone https://github.com/Shak-Zhu/AI_PM_OS_SKILL.git ~/.cursor/ai-pm-os-skill-source
+cp -R ~/.cursor/ai-pm-os-skill-source/ai-pm-os ~/.cursor/skills/ai-pm-os
+node ~/.cursor/skills/ai-pm-os/scripts/validate-skill.js
 ```
 
 如 Cursor 未自动发现，明确引用：
