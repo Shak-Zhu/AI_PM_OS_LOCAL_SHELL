@@ -1,5 +1,9 @@
 # Definition of Ready / Definition of Done
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Document Template | template | 由 Project Manager 在项目初始化时填充 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Draft
 - 最后更新：YYYY-MM-DD
@@ -14,8 +18,6 @@
 
 ## DoD
 
-- 工作包声明为 `implemented, pending PM/QC review`。
 - 所有验收标准有证据并通过。
 - 回归、schema、一致性及相关平台测试通过。
 - 无未声明范围变化和已知 Critical/High/Medium 缺陷。
-- PM/QC 接受后仍需 Human Acceptance 才计入完成度。

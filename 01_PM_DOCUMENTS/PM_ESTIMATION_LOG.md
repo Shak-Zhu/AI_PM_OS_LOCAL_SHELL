@@ -1,5 +1,9 @@
 # 估算日志
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Document Template | template | 由 Project Manager 在估算时填充 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Open / Awaiting Scope Approval
 - 最后更新：YYYY-MM-DD

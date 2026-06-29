@@ -1,10 +1,14 @@
 # 项目章程
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Document Template | template | 由 ai-pm-os Skill 在项目初始化时生成，Project Owner 填入实际内容 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Draft
 - 最后更新：YYYY-MM-DD
 
-> 本文件在项目初始化时由 ai-pm-os Skill 生成。实际内容由 Human Owner 提供的项目背景、目标和约束填入。
+> 本文件在项目初始化时由 ai-pm-os Skill 生成。实际内容由 Project Owner 提供的项目背景、目标和约束填入。
 
 ## 1. 背景与目标
 
@@ -43,5 +47,5 @@
 
 ## 9. 批准
 
-- Human Owner：`INITIALIZE_PROJECT`
+- Project Owner：`INITIALIZE_PROJECT`
 - 批准日期：`INITIALIZE_PROJECT`

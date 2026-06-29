@@ -1,0 +1,488 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-06-29T16:51:38.076Z",
+  "generated_by": "build-template-registry.js",
+  "total_templates": 60,
+  "templates": [
+    {
+      "path": "00_PM_MEMORY/PM_MEMORY_INDEX.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在项目初始化时生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "00_PM_MEMORY/PM_CURRENT_STATUS.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在项目初始化后填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "00_PM_MEMORY/PM_APPROVAL_STATUS.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Owner 批准后填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "00_PM_MEMORY/PM_PENDING_UPDATES.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在项目运行中维护，Project Owner 批准后生效",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "00_PM_MEMORY/PM_ROLE_CONFIG.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Owner 在项目初始化时配置",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "00_PM_MEMORY/PM_DOCUMENT_REGISTRY.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 持续维护",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "00_PM_MEMORY/PM_INPUT_LOG.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在每次接收输入时记录",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "00_PM_MEMORY/PM_ACTIVE_CONTEXT.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在每次会话时更新",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "00_PM_MEMORY/PM_GAP_ANALYSIS.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在 Memory Boot 时生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "00_PM_MEMORY/PM_REQUIREMENTS_TRACEABILITY.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在需求确认时维护",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "00_PM_MEMORY/PM_DOCUMENT_INVENTORY.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 定期更新",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "00_PM_MEMORY/PM_DAILY_BRIEFING.md",
+      "doc_role": "Project Record Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在每日启动时生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_PROJECT_BRIEF.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在项目初始化时生成，Project Owner 填入实际内容",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_ACTIVE_WBS.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在 Scope Baseline 批准后生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_SCOPE_BASELINE.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Owner 在范围评审后填充，Project Owner 批准后生效",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_SCOPE_MANAGEMENT_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在项目规划时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_WBS_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在 Scope Baseline 批准后填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_SCHEDULE_BASELINE.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在规划阶段填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_RAID_LOG.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 持续维护",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_ESTIMATION_LOG.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在估算时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_COST_BASELINE.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在规划阶段填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_CHANGE_LOG.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在变更获批后填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_DECISION_LOG.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在决策后填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_ACTION_LOG.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在行动项确认后填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_LESSONS_LEARNED.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在阶段结束时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_RETROSPECTIVE.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在 Sprint 复盘后填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_STAGE_HISTORY.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在阶段结束时生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_STAKEHOLDER_REGISTER.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在项目初始化时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_STAKEHOLDER_ENGAGEMENT_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在规划阶段填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_COMMUNICATION_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在规划阶段填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_RESOURCE_MANAGEMENT_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在规划阶段填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_QUALITY_MANAGEMENT_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在规划阶段填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_TEST_AND_ACCEPTANCE_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在规划阶段填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_UAT_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在测试规划时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_ACCEPTANCE_LOG.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在验收时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_PROCUREMENT_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在采购需求确认时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_REQUIREMENTS_REGISTER.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在需求收集时维护",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_REQUIREMENTS_MANAGEMENT_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在规划阶段填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_RELEASE_CHECKLIST.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在发布前填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_CONTROL_SUMMARY.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在项目运行中持续更新",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_COMPLETION_METRICS.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在阶段结束时生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_CONFIGURATION_MANAGEMENT_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在规划阶段填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_DATA_GOVERNANCE_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在规划阶段填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_DELIVERY_STRATEGY.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在项目启动时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_JSON_DATA_CONTRACT.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在数据契约定义时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_BENEFITS_MANAGEMENT_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在收益识别时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_RISK_MANAGEMENT_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在风险规划时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "01_PM_DOCUMENTS/PM_RACI_MATRIX.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在规划阶段填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "02_AGILE/PM_PRODUCT_BACKLOG.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在项目初始化时生成，Project Owner 填入实际需求",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "02_AGILE/PM_USER_STORIES.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在需求细化时生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "02_AGILE/PM_SPRINT_BACKLOG.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在 Sprint Planning 时生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "02_AGILE/PM_DOR_DOD.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在项目初始化时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "02_AGILE/PM_VELOCITY_LOG.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在 Sprint 结束时更新",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "02_AGILE/PM_BURNDOWN_DATA.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在 Sprint 期间持续更新",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "02_AGILE/PM_SPRINT_PLAN.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在 Sprint Planning 时生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "02_AGILE/PM_SPRINT_REVIEW.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在 Sprint Review 时生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "02_AGILE/PM_SPRINT_RETROSPECTIVE.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在 Sprint Retrospective 时生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "02_AGILE/PM_DAILY_STANDUP_LOG.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在每日站会时生成",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "02_AGILE/PM_ACCEPTANCE_CRITERIA.md",
+      "doc_role": "Project Document Template",
+      "instance_status": "template",
+      "init_behavior": "由 Project Manager 在需求细化时填充",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    },
+    {
+      "path": "03_MEETINGS/meeting_index/PM_MEETING_INDEX.md",
+      "doc_role": "Agile Output",
+      "instance_status": "template",
+      "init_behavior": "由 ai-pm-os Skill 在每次处理会议材料时更新",
+      "fact_declaration": "无真实项目数据",
+      "file_exists": true
+    }
+  ]
+}

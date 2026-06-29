@@ -1,5 +1,9 @@
 # 质量管理计划
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| 质量管理计划 | template | 由 Project Manager 在项目初始化时配置 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Draft
 - 最后更新：YYYY-MM-DD
@@ -8,13 +12,13 @@
 
 1. Requirement Entry Gate：字段完整、验收可测试。
 2. Scope Baseline Gate：In/Out Scope、版本和批准齐全。
-3. Work Package Gate：边界、验收、禁止事项和 Read Evidence 齐全。
-4. QC Gate：每条标准有证据、无已知缺陷、无未声明范围变化、回归通过。
-5. Human Acceptance Gate：由 Human Owner/UAT Owner 明确接受。
+3. Deliverable Gate：边界、验收标准、禁止事项齐全。
+4. Change Gate：变更影响分析完整、审批记录齐全。
+5. Release Gate：所有质量标准通过、审批记录齐全。
 
 ## P0 自动检查
 
-JSON schema、Markdown/JSON 一致性、目录/文件存在性、Pending Updates、Git 初始化、Dashboard build/start smoke、public/data 同步。
+JSON schema、Markdown/JSON 一致性、目录/文件存在性、Pending Updates、Git 初始化、Dashboard build/smoke、public/data 同步。
 
 ## 缺陷等级
 

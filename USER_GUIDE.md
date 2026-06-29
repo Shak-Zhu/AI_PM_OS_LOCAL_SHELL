@@ -25,8 +25,9 @@
 
 ### 1.1 当前可用状态
 
-AI PM OS Local Shell 的 M1/P0 已完成，31 项 P0 需求均已 Human Accepted。
-当前产品基线提交为 `ecfecf1`。
+AI PM OS Local Shell 的 M1/P0 已完成，31 项 P0 需求均已验收完成。
+当前产品基线以本仓库 `main` 分支最新已发布提交为准；运行 `git rev-parse HEAD`
+可查看本地克隆对应的精确提交。
 
 当前可用于：
 
@@ -122,7 +123,7 @@ npm --version
 在项目根目录运行：
 
 ```bash
-node scripts/verify-release.js
+node scripts/verify-release.js --strict
 node scripts/verify-governance.js
 node ai-pm-os/scripts/validate-skill.js
 node scripts/validate-data.js
@@ -249,7 +250,7 @@ node scripts/check-pollution.js
 - 项目名称、目标和业务背景
 - 成功标准
 - P0/P1/P2 范围和明确排除项
-- PM Owner、Human Owner、Sponsor Approver
+- PM Owner、Project Owner、Sponsor Approver
 - Product、Tech、Business、Agile、UAT Owner
 - 目标日期或 `TBD`
 - 已知风险和依赖
@@ -271,10 +272,6 @@ node scripts/check-pollution.js
 - `07_DATA/project_roles.json`
 
 Scope Baseline 未明确批准前，不应生成正式 WBS。
-
-只有在当前项目属于软件交付、Human Owner 明确启用 Cursor/Codex Coder 委派，
-并要求 AI PM 拆分实现任务时，才生成 Coder Work Package。普通业务、运营、
-咨询或纯治理项目不需要该流程。
 
 ---
 
@@ -439,7 +436,7 @@ node ai-pm-os/scripts/validate-skill.js
 → 事实提取
 → Gap / Conflict 检查
 → Proposed Pending Update
-→ Human Owner 审批
+→ Project Owner 审批
 → 原子应用
 → Markdown 更新
 → JSON 同步
@@ -655,7 +652,7 @@ git diff
 ### 14.2 提交
 
 ```bash
-node scripts/verify-release.js
+node scripts/verify-release.js --strict
 git add <明确文件>
 git commit -m "docs: update project status"
 git push
@@ -733,19 +730,6 @@ git log --oneline HEAD..upstream/main
 以下信息可能重复、冲突或缺失。区分事实层级，识别冲突和Gap，
 禁止猜测。正式更新先生成Pending Updates。
 ```
-
-可选：向 AI Coder 签发软件实现工作包：
-
-```text
-当前项目已启用AI Coder委派。
-根据Approved Scope和WBS签发Coder Work Package。
-必须包含Required Project Files、scope_in、scope_out、Allowed Files、
-Acceptance Criteria、验证命令、禁止项和报告要求。
-同时写入文件并在聊天中输出完整可复制正文。
-```
-
-未明确启用 AI Coder 委派时，使用 `PM_ACTIVE_WBS.md`、Action、里程碑、
-Backlog 和 Sprint 管理交付，不创建 Coder Work Package 或 PM/QC 代码审查记录。
 
 ---
 

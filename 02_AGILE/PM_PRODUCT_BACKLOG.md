@@ -1,10 +1,14 @@
 # Product Backlog
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Document Template | template | 由 ai-pm-os Skill 在项目初始化时生成，Project Owner 填入实际需求 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Draft / Awaiting Scope Approval
 - 最后更新：YYYY-MM-DD
 
-> 本文件由 ai-pm-os Skill 持续维护。Backlog 条目由 Human Owner 确认的需求生成。
+> 本文件由 ai-pm-os Skill 持续维护。Backlog 条目由 Project Owner 确认的需求生成。
 
 ## Backlog 条目格式
 

@@ -1,5 +1,9 @@
 # 项目记忆索引
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| 记忆入口索引 | template | 由 Project Manager 在项目初始化后填充 | INITIALIZE_PROJECT 占位符 |
+
 - 版本：v0.1
 - 状态：Active
 - 最后更新：YYYY-MM-DD
@@ -34,7 +38,7 @@
 
 ## 当前状态摘要
 
-项目已初始化，Scope Baseline 状态待 Human Owner 批准。调用 `ai-pm-os 初始化项目` 开始。
+项目已初始化，Scope Baseline 状态待 Project Owner 批准。调用 `ai-pm-os 初始化项目` 开始。
 
 ## 进行中的工作
 

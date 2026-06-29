@@ -1,5 +1,9 @@
 # 当前 AI 工作上下文
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Record Template | template | 由 ai-pm-os Skill 在每次会话时更新 | 无真实项目数据 |
+
 - 版本：v0.2
 - 状态：Active
 - 最后更新：YYYY-MM-DD

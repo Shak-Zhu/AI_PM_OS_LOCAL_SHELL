@@ -1,22 +1,26 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "approvals",
-  "description": "Pending update approvals",
+  "description": "Project approval records",
   "type": "object",
   "properties": {
     "approvals": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["approval_id", "pu_id", "requestor", "status", "submitted_date"],
+        "required": ["approval_id", "approval_type", "related_object", "decision_maker", "decision_role", "relayed_by", "source", "decided_at", "decision", "notes", "status"],
         "properties": {
           "approval_id": { "type": "string" },
-          "pu_id": { "type": "string" },
-          "requestor": { "type": "string" },
-          "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-          "submitted_date": { "type": "string" },
-          "decision_date": { "type": "string" },
-          "decision_by": { "type": "string" }
+          "approval_type": { "type": "string", "enum": ["Scope Baseline", "Pending Update", "Change", "Major Decision", "Milestone/Release", "UAT"] },
+          "related_object": { "type": "string" },
+          "decision_maker": { "type": "string" },
+          "decision_role": { "type": "string" },
+          "relayed_by": { "type": "string" },
+          "source": { "type": "string" },
+          "decided_at": { "type": "string" },
+          "decision": { "type": "string", "enum": ["approved", "rejected", "conditionally_approved", "pending", "unconfirmed"] },
+          "notes": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending", "approved", "rejected", "conditionally_approved", "unconfirmed"] }
         }
       }
     }

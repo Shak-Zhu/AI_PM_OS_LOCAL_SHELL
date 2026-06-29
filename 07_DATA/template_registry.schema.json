@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "template_registry",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "generated_by": {
+      "type": "string"
+    },
+    "total_templates": {
+      "type": "number"
+    },
+    "templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "doc_role",
+          "instance_status",
+          "init_behavior",
+          "fact_declaration",
+          "file_exists"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "doc_role": {
+            "type": "string"
+          },
+          "instance_status": {
+            "type": "string"
+          },
+          "init_behavior": {
+            "type": "string"
+          },
+          "fact_declaration": {
+            "type": "string"
+          },
+          "file_exists": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

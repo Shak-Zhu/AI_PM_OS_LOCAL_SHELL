@@ -1,5 +1,9 @@
 # 变更日志
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| 变更日志 | template | 由 Project Manager 在变更获批后填充 | 实际变更条目 |
+
 - 版本：v0.1
 - 状态：Active
 - 最后更新：YYYY-MM-DD

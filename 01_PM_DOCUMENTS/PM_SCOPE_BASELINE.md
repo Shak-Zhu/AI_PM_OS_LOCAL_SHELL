@@ -1,10 +1,14 @@
 # 范围基线
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Document Template | template | 由 Project Owner 在范围评审后填充，Project Owner 批准后生效 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Draft
 - 最后更新：YYYY-MM-DD
 
-> 本文件在项目初始化后由 ai-pm-os Skill 生成。实际范围条目由 Human Owner 提供的材料和 Pending Updates 批准后填入。
+> 本文件在项目初始化后由 ai-pm-os Skill 生成。实际范围条目由 Project Owner 提供的材料和 Pending Updates 批准后填入。
 
 ## 范围条目格式
 
@@ -15,7 +19,7 @@
 
 - **Draft**：范围尚未确定
 - **Pending Review**：范围已提出，等待审阅
-- **Approved**：Human Owner 已批准
+- **Approved**：Project Owner 已批准
 
 ### 范围门禁
 

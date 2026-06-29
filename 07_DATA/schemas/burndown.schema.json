@@ -1,20 +1,59 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "burndown",
-  "description": "Sprint burndown data",
+  "description": "Sprint burndown data — ADM-11 + WP-011 §8",
   "type": "object",
   "properties": {
-    "sprint_id": { "type": "string" },
-    "total_points": { "type": "number" },
+    "sprint_id": {
+      "type": "string",
+      "description": "Associated Sprint ID, format SPRINT-YYYY-NN"
+    },
+    "total_points": {
+      "type": "number",
+      "description": "Total committed story points for the sprint"
+    },
     "days": {
       "type": "array",
+      "description": "Daily burndown data points",
       "items": {
         "type": "object",
-        "required": ["date", "ideal_remaining", "actual_remaining"],
+        "required": ["sprint_id", "date", "planned_remaining_points", "actual_remaining_points", "completed_points", "scope_added_points", "scope_removed_points", "blocked_points", "source"],
         "properties": {
-          "date": { "type": "string" },
-          "ideal_remaining": { "type": "number" },
-          "actual_remaining": { "type": "number" }
+          "sprint_id": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "description": "Data date, format YYYY-MM-DD"
+          },
+          "planned_remaining_points": {
+            "type": "number",
+            "description": "Ideal remaining story points"
+          },
+          "actual_remaining_points": {
+            "type": "number",
+            "description": "Actual remaining story points"
+          },
+          "completed_points": {
+            "type": "number",
+            "description": "Points completed today"
+          },
+          "scope_added_points": {
+            "type": "number",
+            "description": "Scope added today (SP)"
+          },
+          "scope_removed_points": {
+            "type": "number",
+            "description": "Scope removed today (SP)"
+          },
+          "blocked_points": {
+            "type": "number",
+            "description": "Blocked story points (not counted as completed)"
+          },
+          "source": {
+            "type": "string",
+            "description": "Data source label"
+          }
         }
       }
     }

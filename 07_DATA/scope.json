@@ -1,11 +1,3 @@
 {
-  "scope_baseline": {
-    "status": null,
-    "approval_status": null,
-    "version": null,
-    "approved_by": null,
-    "approved_at": null
-  },
-  "in_scope": [],
-  "out_of_scope": []
+  "scope": []
 }

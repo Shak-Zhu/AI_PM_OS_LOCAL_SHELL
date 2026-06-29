@@ -1,5 +1,9 @@
 # RAID 日志
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Document Template | template | 由 Project Manager 持续维护 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Active
 - 最后更新：YYYY-MM-DD

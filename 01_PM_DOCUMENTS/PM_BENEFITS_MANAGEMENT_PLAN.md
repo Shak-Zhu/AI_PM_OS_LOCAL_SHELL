@@ -1,5 +1,9 @@
 # 效益管理计划
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Document Template | template | 由 Project Manager 在收益识别时填充 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Draft
 - 最后更新：YYYY-MM-DD
@@ -18,4 +22,4 @@
 - 必填字段缺失率、未审批变更数、Markdown/JSON 不一致数。
 - 用户在 30 秒内定位当前阶段、阻塞和下一步的成功率。
 
-基线值和目标值将在 M1 前由 Human Owner 批准。
+基线值和目标值将在 M1 前由 Project Owner 批准。

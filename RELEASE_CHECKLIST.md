@@ -195,7 +195,7 @@ Git URL 安装后，以下命令需要用户额外复制根目录 `scripts/`：
 **验证发布边界**：
 
 ```bash
-node scripts/verify-release.js
+node scripts/verify-release.js --strict
 # Check 4 会验证复制物中不包含上述排除项
 ```
 
@@ -234,13 +234,13 @@ node scripts/verify-governance.js
 | 命令 | 期望结果 |
 |---|---|
 | `node scripts/verify-governance.js` | RESULT: PASS |
-| `node scripts/verify-release.js` | RESULT: PASS |
+| `node scripts/verify-release.js --strict` | RESULT: PASS |
 | `node ai-pm-os/scripts/validate-skill.js` | RESULT: PASS |
 | `node scripts/validate-skill.js` | RESULT: PASS |
 | `node scripts/check-pollution.js` | RESULT: PASS |
 | `node scripts/validate-data.js` | RESULT: PASS |
 | `node scripts/sync-data.js` | RESULT: PASS |
-| `node scripts/audit-data-consistency.js` | result: PASS |
+| `node scripts/audit-data-consistency.js` | RESULT: PASS |
 | `git diff -- 07_DATA/` | 空（无变更） |
 
 ---
@@ -289,5 +289,4 @@ node scripts/sync-data.js
 | `scripts/verify-governance.js` | P0 治理验证脚本 |
 | `scripts/verify-release.js` | 发布验证脚本 |
 | `scripts/check-pollution.js` | 仓库污染检查 |
-| `P0_GOVERNANCE_EVIDENCE.md` | P0 治理证据矩阵 |
 | `RELEASE_CHECKLIST.md` | 本文件 |

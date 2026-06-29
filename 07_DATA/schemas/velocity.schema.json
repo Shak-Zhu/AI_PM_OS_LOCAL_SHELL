@@ -1,23 +1,48 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "velocity",
-  "description": "Sprint velocity log",
+  "description": "Sprint velocity log — ADM-11 + WP-011 §9",
   "type": "object",
   "properties": {
     "velocity": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["sprint_id", "planned_points", "completed_points"],
+        "required": ["sprint_id", "planned_points", "completed_points", "accepted_points", "carry_over_points", "velocity_variance", "variance_reason", "source"],
         "properties": {
-          "sprint_id": { "type": "string" },
-          "planned_points": { "type": "number" },
-          "completed_points": { "type": "number" },
-          "accepted_points": { "type": "number" },
-          "carry_over_points": { "type": "number" },
-          "velocity_variance": { "type": "number" },
-          "variance_reason": { "type": "string" },
-          "source": { "type": "string" }
+          "sprint_id": {
+            "type": "string",
+            "description": "Sprint ID, format SPRINT-YYYY-NN"
+          },
+          "planned_points": {
+            "type": "number",
+            "description": "Sprint planned velocity"
+          },
+          "completed_points": {
+            "type": "number",
+            "description": "Sprint completed velocity"
+          },
+          "accepted_points": {
+            "type": "number",
+            "description": "PO accepted story points"
+          },
+          "carry_over_points": {
+            "type": "number",
+            "description": "Carry-over story points"
+          },
+          "velocity_variance": {
+            "type": "number",
+            "description": "completed_points - planned_points"
+          },
+          "variance_reason": {
+            "type": "string",
+            "enum": ["Scope Added", "Blocked Items", "Estimation Gap", "External Dependency", "Team Change", "Other"],
+            "description": "Reason for velocity variance"
+          },
+          "source": {
+            "type": "string",
+            "description": "Data source label"
+          }
         }
       }
     }

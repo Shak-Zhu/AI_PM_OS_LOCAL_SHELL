@@ -1,5 +1,9 @@
 # 项目复盘
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Document Template | template | 由 Project Manager 在 Sprint 复盘后填充 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Template / Not Started
 - 最后更新：YYYY-MM-DD

@@ -153,13 +153,14 @@ function checkREQ005() {
 }
 
 // =============================================================================
-// REQ-006 — Role Configuration and Splittable Approvals
+// REQ-006 — Role Configuration and Splittable Approvals (R2)
+// References: CHG-012 §3.3.4, PM_COPILOT_OPERATING_MODEL_DESIGN.md §3
 //
-// All required:
-// 1. PM_ROLE_CONFIG.md has all 9 roles
-// 2. PM_ROLE_CONFIG.md has splittable rule
-// 3. project_roles.json is valid JSON
-// 4. project_roles.json has meaningful content (not just {})
+// Role model (R2):
+// - PM_ROLE_CONFIG.md defines 10 candidate natural project roles
+// - project_roles.json is the runtime JSON; clean shell = roles: []
+// - After initialization: each role must be a known candidate OR an explicit project custom role
+// - No fixed quantity, no requirement for all roles, no default owner field, no old AI-role set
 // =============================================================================
 
 function checkREQ006() {
@@ -169,23 +170,30 @@ function checkREQ006() {
   const rolesJsonContent = readFile('07_DATA/project_roles.json');
   let errors = 0;
 
-  const requiredRoles = [
-    'PM Owner', 'Human Owner', 'PM Reviewer', 'Sponsor Approver',
-    'Product Owner', 'Tech Owner', 'Business Owner', 'Agile Owner', 'UAT Owner'
+  // ---- Part A: PM_ROLE_CONFIG.md must define 10 candidate natural roles ----
+  const candidateRoles = [
+    'Project Owner',
+    'Project Manager',
+    'Sponsor',
+    'Product Owner',
+    'Delivery Owner',
+    'Business Owner',
+    'Technical Owner',
+    'Scrum Master',
+    'UAT Owner',
+    'Approver'
   ];
 
-  // ---- Part A: PM_ROLE_CONFIG.md ----
-  // 1. All 9 roles present
-  for (const role of requiredRoles) {
+  for (const role of candidateRoles) {
     if (roleConfigContent.includes(role)) {
-      console.log('  OK: role found: ' + role);
+      console.log('  OK: role found in Markdown: ' + role);
     } else {
-      console.log('  FAIL: role missing: ' + role);
+      console.log('  FAIL: role missing in Markdown: ' + role);
       errors++;
     }
   }
 
-  // 2. Splittable approval rule
+  // ---- Part B: Splittable approval rule ----
   const hasSplittable = /可拆分|拆分.*审批|splittable.*approval|separate.*approval/i.test(roleConfigContent);
   if (hasSplittable) {
     console.log('  OK: splittable approval rule present');
@@ -194,8 +202,7 @@ function checkREQ006() {
     errors++;
   }
 
-  // ---- Part B: project_roles.json ----
-  // 3. Valid JSON
+  // ---- Part C: project_roles.json must be valid JSON ----
   let parsed = null;
   try {
     parsed = JSON.parse(rolesJsonContent);
@@ -203,100 +210,97 @@ function checkREQ006() {
   } catch (e) {
     console.log('  FAIL: project_roles.json JSON parse error: ' + e.message);
     errors++;
-    console.log('  FAIL: REQ-006 (' + errors + ' sub-check(s) failed — all must pass');
+    console.log('  FAIL: REQ-006 (' + errors + ' sub-check(s) failed)');
     totalErrors += errors;
     return false;
   }
 
-  // 4. Extract roles from "roles" array
+  // ---- Part D: Clean shell — empty roles array is valid ----
   const roleEntries = Array.isArray(parsed.roles) ? parsed.roles : [];
-
-  // 5. Exactly 9 entries required (no more, no less)
-  if (roleEntries.length !== 9) {
-    console.log('  FAIL: project_roles.json has ' + roleEntries.length + ' role entries, exactly 9 required');
-    errors++;
-  } else {
-    console.log('  OK: project_roles.json has exactly 9 role entries');
+  if (roleEntries.length === 0) {
+    // Clean shell: empty roles array is the correct not_initialized state
+    console.log('  OK: project_roles.json has empty roles array (clean shell — valid)');
+    console.log('  PASS: REQ-006 — 10 candidate roles in Markdown, splittable rule present, clean shell valid');
+    totalErrors += errors;
+    return errors > 0 ? false : true;
   }
 
-  // 6. All role_id values must be in the requiredRoles set
+  // ---- Part E: Post-initialization — validate each role entry ----
   const seenRoleIds = new Set();
-  let duplicateFound = false;
-  let unknownFound = false;
+  let hasDuplicate = false;
+  let hasInvalidField = false;
+  let hasUnknownRole = false;
+
   for (let idx = 0; idx < roleEntries.length; idx++) {
     const entry = roleEntries[idx];
-    const roleId = entry.role_id || '';
-    if (!requiredRoles.includes(roleId)) {
-      console.log('  FAIL: project_roles.json role_id[' + idx + '] = "' + roleId + '" is not in required set');
-      unknownFound = true;
+    if (!entry || typeof entry !== 'object') {
+      console.log('  FAIL: project_roles.json[' + idx + '] is not a valid object');
+      hasInvalidField = true;
+      errors++;
+      continue;
+    }
+
+    // role_id must be a non-empty string
+    const roleId = (entry.role_id || '').trim();
+    if (!roleId) {
+      console.log('  FAIL: project_roles.json[' + idx + '] missing non-empty role_id');
+      hasInvalidField = true;
       errors++;
     }
-    if (seenRoleIds.has(roleId)) {
+
+    // Check for duplicates
+    if (roleId && seenRoleIds.has(roleId)) {
       console.log('  FAIL: project_roles.json has duplicate role_id: "' + roleId + '"');
-      duplicateFound = true;
+      hasDuplicate = true;
       errors++;
     }
-    seenRoleIds.add(roleId);
-  }
+    if (roleId) seenRoleIds.add(roleId);
 
-  if (!duplicateFound && !unknownFound) {
-    console.log('  OK: all role_id values are unique and in required set');
-  }
+    // Each role must be either a known candidate OR an explicit custom project role
+    // A known candidate role must be one of the 10 in PM_ROLE_CONFIG.md
+    // A custom role must have a non-empty description
+    const isKnownCandidate = candidateRoles.includes(roleId);
+    const hasDescription = entry.description && entry.description.trim() !== '';
+    if (!isKnownCandidate && !hasDescription) {
+      console.log('  FAIL: project_roles.json[' + idx + '] role_id="' + roleId + '" is not a known candidate and has no description (custom role must have description)');
+      hasUnknownRole = true;
+      errors++;
+    } else if (isKnownCandidate) {
+      console.log('  OK: role entry is known candidate: ' + roleId);
+    } else {
+      console.log('  OK: role entry is custom role with description: ' + roleId);
+    }
 
-  // 7. owner must all be "INITIALIZE_PROJECT" (template placeholder)
-  let wrongOwner = false;
-  for (let idx = 0; idx < roleEntries.length; idx++) {
-    const entry = roleEntries[idx];
-    const owner = entry.owner || '';
-    if (owner !== 'INITIALIZE_PROJECT') {
-      console.log('  FAIL: project_roles.json role_id[' + idx + '] = "' + (entry.role_id || '') + '" has owner="' + owner + '" (expected INITIALIZE_PROJECT)');
-      wrongOwner = true;
+    // role_name should match role_id (or be a localized version)
+    if (!entry.role_name || entry.role_name.trim() === '') {
+      console.log('  FAIL: project_roles.json[' + idx + '] role_id="' + roleId + '" missing non-empty role_name');
+      hasInvalidField = true;
+      errors++;
+    }
+
+    // owner, status, default_or_optional are informational — not required to be present
+    // But if present, owner should be a non-empty string
+    if (entry.owner !== undefined && typeof entry.owner === 'string' && entry.owner.trim() === '') {
+      console.log('  FAIL: project_roles.json[' + idx + '] role_id="' + roleId + '" has empty owner field');
+      hasInvalidField = true;
       errors++;
     }
   }
-  if (!wrongOwner) {
-    console.log('  OK: all owners are INITIALIZE_PROJECT (template placeholder)');
-  }
 
-  // 8. Exact default/optional classification per approved §3.3.4
-  // default (4): PM Owner, Human Owner, PM Reviewer, Sponsor Approver
-  // optional (5): Product Owner, Tech Owner, Business Owner, Agile Owner, UAT Owner
-  const defaultRoles = new Set([
-    'PM Owner', 'Human Owner', 'PM Reviewer', 'Sponsor Approver'
-  ]);
-  const optionalRoles = new Set([
-    'Product Owner', 'Tech Owner', 'Business Owner', 'Agile Owner', 'UAT Owner'
-  ]);
-  let classificationError = false;
-  for (let idx = 0; idx < roleEntries.length; idx++) {
-    const entry = roleEntries[idx];
-    const roleId = entry.role_id || '';
-    const classification = entry.default_or_optional || '';
-    if (defaultRoles.has(roleId)) {
-      if (classification !== 'default') {
-        console.log('  FAIL: project_roles.json role_id[' + idx + '] = "' + roleId + '" must be default, got "' + classification + '"');
-        classificationError = true;
-        errors++;
-      }
-    } else if (optionalRoles.has(roleId)) {
-      if (classification !== 'optional') {
-        console.log('  FAIL: project_roles.json role_id[' + idx + '] = "' + roleId + '" must be optional, got "' + classification + '"');
-        classificationError = true;
-        errors++;
-      }
-    }
+  if (hasDuplicate) {
+    console.log('  FAIL: duplicate role_id values found');
   }
-  if (!classificationError) {
-    console.log('  OK: all default/optional classifications match approved §3.3.4 mapping');
+  if (hasInvalidField) {
+    console.log('  FAIL: invalid field values found in role entries');
   }
 
   if (errors > 0) {
-    console.log('  FAIL: REQ-006 (' + errors + ' sub-check(s) failed — all must pass');
+    console.log('  FAIL: REQ-006 (' + errors + ' sub-check(s) failed)');
     totalErrors += errors;
     return false;
   }
 
-  console.log('  PASS: REQ-006 — all 9 roles, splittable rule, and exact project_roles.json structure verified');
+  console.log('  PASS: REQ-006 — 10 candidate roles in Markdown, splittable rule, clean shell valid, initialized roles valid');
   return true;
 }
 

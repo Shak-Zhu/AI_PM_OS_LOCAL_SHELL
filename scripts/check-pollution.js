@@ -35,9 +35,9 @@ const STRICT_PATTERNS = [
   // These specific statuses indicate a concrete project execution state (not template schema).
   // We match specific phase/decision words but EXCLUDE:
   //   - "Pending Review" (legitimate document schema status)
-  //   - "PM Review" / "Human Owner" / "Human Accepted" (role names)
+  //   - "PM Review" / "Project Owner" / "Human Accepted" (role names)
   //   - "Rejected" (only if standalone, not part of "unrejected")
-  // Match: implemented/Human Accepted/QC Review/Rework/Closed/Issued/HumanRejected
+  // Match: implemented/Human Accepted/QC Review/Rework/Closed/Issued/Project Owner
   { pattern: /\b(?:implemented|Human\s+Accepted|QC\s+Review|Rework|Issued|Closed)\b/i, label: 'Governance status in product shell [STRICT]' },
 ];
 
@@ -136,6 +136,17 @@ const ALLOWED_FILES = [
   'README.md',
 ];
 
+// Agile files that need structured Sprint/date data-row checking (QC-F-232)
+// These files must have only clean template rows (SPRINT-YYYY-NN, YYYY-MM-DD placeholder).
+// Concrete Sprint IDs or dates in data rows are pollution.
+const AGILE_STRUCTURAL_FILES = [
+  'PM_BURNDOWN_DATA.md',
+  'PM_VELOCITY_LOG.md',
+  'PM_PRODUCT_BACKLOG.md',
+  'PM_SPRINT_BACKLOG.md',
+  'PM_USER_STORIES.md',
+];
+
 // Line-level allowlist for specific false-positive findings.
 // Maps: relative file path -> array of { patternLabel, linePattern }
 // If a finding matches the patternLabel AND the triggering line matches linePattern,
@@ -159,6 +170,53 @@ const ALLOWED_FILE_LINES = [
 ];
 
 // --- Utility Functions ---
+
+/**
+ * Returns true if the file is an agile structural file that needs data-row checking.
+ * Only applies to files in the 02_AGILE directory.
+ */
+function isAgileStructuralFile(relativePath) {
+  const fileName = path.basename(relativePath);
+  return AGILE_STRUCTURAL_FILES.indexOf(fileName) !== -1;
+}
+
+/**
+ * Check an agile structural file for concrete Sprint/date pollution in data rows.
+ * Returns array of { pattern, file } findings.
+ * Only checks table data rows (| ... |), not frontmatter or metadata.
+ * Allows: SPRINT-YYYY-NN, YYYY-MM-DD placeholder in frontmatter or column headers.
+ * Flags: concrete Sprint IDs like SPRINT-2026-03, concrete dates like 2026-06-15 in data rows.
+ */
+function scanAgileStructuralFile(filePath) {
+  const findings = [];
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const lines = content.split('\n');
+    // Concrete Sprint IDs (not placeholder SPRINT-YYYY-NN)
+    // SPRINT-YYYY-NN has year 1900-2099 and 2-digit number.
+    // Concrete: SPRINT-2026-03, SPRINT-2026-99, etc.
+    const concreteSprint = /\bSPRINT-(19|20)\d{2}-(?:0[1-9]|[1-9][0-9])\b/;
+    // Concrete dates (not placeholder YYYY-MM-DD)
+    const concreteDate = /\b(19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])\b/;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      // Only check table data rows (start with optional whitespace then |, but not ||)
+      if (!line.match(/^\s*\|[^|]/)) continue;
+      if (line.match(/^\s*\|{2}/)) continue; // separator or metadata row
+
+      if (concreteSprint.test(line)) {
+        findings.push({ pattern: 'Concrete Sprint ID in agile data row [STRUCTURAL]', file: filePath });
+      }
+      if (concreteDate.test(line)) {
+        findings.push({ pattern: 'Concrete date in agile data row [STRUCTURAL]', file: filePath });
+      }
+    }
+  } catch (err) {
+    // Binary or unreadable file - skip silently
+  }
+  return findings;
+}
 
 function shouldSkipDir(relativePath) {
   // node_modules and dist must be skipped at ALL levels (third-party deps / build output).
@@ -327,7 +385,10 @@ function main() {
     filesScanned++;
 
     let findings = [];
-    if (isPMMemoryFile(relativePath)) {
+    if (isAgileStructuralFile(relativePath)) {
+      // QC-F-232: Structured Sprint/date checking for agile files
+      findings = scanAgileStructuralFile(fullPath);
+    } else if (isPMMemoryFile(relativePath)) {
       // Phase 1a: Strict check for product shell memory templates only
       findings = scanFile(fullPath, STRICT_PATTERNS);
     } else {

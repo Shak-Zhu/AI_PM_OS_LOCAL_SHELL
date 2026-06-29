@@ -14,6 +14,7 @@ import GanttSection from './components/GanttSection.jsx';
 import MeetingSection from './components/MeetingSection.jsx';
 import ProgressSection from './components/ProgressSection.jsx';
 import EstimationSection from './components/EstimationSection.jsx';
+import AgileMetricsSection from './components/AgileMetricsSection.jsx';
 
 function EmptyState({ message = 'No data yet' }) {
   return (
@@ -104,6 +105,7 @@ export default function App() {
         <ApprovalsSection data={data.approvals} />
         <SprintSection data={data.sprints} />
         <BacklogSection data={data.backlog} />
+        <AgileMetricsSection burndown={data.burndown} velocity={data.velocity} backlog={data.backlog} />
         <MeetingSection meetings={data.meetings} meeting_actions={data.meeting_actions} meeting_decisions={data.meeting_decisions} />
         <ProgressSection data={data.progress} />
         <EstimationSection data={data.estimation} />

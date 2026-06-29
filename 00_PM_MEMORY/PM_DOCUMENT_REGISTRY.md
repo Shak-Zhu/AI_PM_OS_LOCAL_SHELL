@@ -1,5 +1,9 @@
 # 项目文档注册表
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Record Template | template | 由 ai-pm-os Skill 持续维护 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Active
 - 最后更新：YYYY-MM-DD
@@ -10,10 +14,10 @@
 
 | 文档类别 | 文件/目录 | 状态 | 审批要求 | 健康度 |
 |---|---|---|---|---|
-| 需求源 | `REQUIREMENTS_BASELINE_INDEX.md` | `INITIALIZE_PROJECT` | Human Owner | `INITIALIZE_PROJECT` |
+| 需求源 | `REQUIREMENTS_BASELINE_INDEX.md` | `INITIALIZE_PROJECT` | Project Owner | `INITIALIZE_PROJECT` |
 | 全局规则 | `_AI_GLOBAL_MEMORY/` | Draft | PM Review | Green |
 | 项目记忆 | `00_PM_MEMORY/` | Active | PM Maintained | Green |
-| 启动/规划 | `01_PM_DOCUMENTS/` | Draft/Pending Review | Human Owner | Amber |
+| 启动/规划 | `01_PM_DOCUMENTS/` | Draft/Pending Review | Project Owner | Amber |
 | 敏捷 | `02_AGILE/` | Draft Templates | Product Owner | Amber |
 | 会议 | `03_MEETINGS/` | Initialized | PM Maintained | Green |
 | To-do | `04_TODO/` | Initialized | 无 | Green |

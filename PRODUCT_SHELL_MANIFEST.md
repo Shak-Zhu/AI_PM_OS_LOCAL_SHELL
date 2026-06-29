@@ -4,6 +4,11 @@
 - 状态：Active
 - 最后更新：YYYY-MM-DD
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| 产品壳清单定义 | template | 由 ai-pm-os Skill 维护 | 初始化占位符不作为事实 |
+
+
 ## 目的
 
 本文档记录本地 AI 项目管理壳系统的目录结构、文件类别、初始化状态和禁止包含的污染类型。
@@ -254,7 +259,7 @@ JSON 数据主副本文件夹。所有文件初始化为空数组或 null 值。
 ### 边界规则
 
 1. 产品壳 Git 只跟踪本清单列出的模板、Skill、脚本、Dashboard 和空数据文件。
-2. 新项目不得包含 AI PM OS 产品开发期间的需求、工作包、审查报告或真实项目事实。
+2. 新项目不得包含 AI PM OS 产品开发期间的需求、交付物、审查报告或真实项目事实。
 3. 未初始化字段必须使用 `INITIALIZE_PROJECT`、`YYYY-MM-DD`、`TBD` 或空数组等占位值。
 4. 实际项目内容不得 push 回产品壳模板仓库。
 

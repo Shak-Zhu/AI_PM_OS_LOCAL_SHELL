@@ -42,7 +42,7 @@
 7. 读取 `ai-pm-os/references/agile-delivery-rules.md` 执行敏捷交付治理。
 8. 读取 `ai-pm-os/scenarios/scenarios.md` 校验行为与基准场景一致。
 9. 读取 `ai-pm-os/references/runtime-compliance-contracts.md` 处理关键输出契约与 Pre-send Compliance Gate；
-   6 类契约（WP/Rework/QC/Change/PU/Human Acceptance）必须满足 10 字段 + 8 步门禁；
+   6 类审批（Scope Baseline / Pending Update / Change / Major Decision / Milestone-Release / UAT）必须满足 11 字段 + 来源校验；
    `one-click-copy = 完整正文单代码块`；不得依赖聊天记忆替代正式规则。
 
 不得越过上述文件直接猜测 Skill 行为；不得删除或弱化 `ai-pm-os/` 中
@@ -52,9 +52,8 @@
 
 - Markdown 是权威源，JSON 是可视化同步层。
 - 不得把未确认内容写成已确认事实或 Decision。
-- 关键更新先进入 `PM_PENDING_UPDATES.md` 并请求 Human Owner 批准。
+- 关键更新先进入 `PM_PENDING_UPDATES.md` 并请求 Project Owner 批准。
 - Scope Baseline 未批准前，不得创建正式 WBS。
-- Coder Work Package 仅在 Human Owner 明确启用 AI Coder 委派的软件交付场景中创建。
 - 不得覆盖 Approved Baseline；变更必须进入 Change Log。
 - 不得编造无法读取的输入内容。
 - 不自动 push；Git commit 不得混入用户无关修改。

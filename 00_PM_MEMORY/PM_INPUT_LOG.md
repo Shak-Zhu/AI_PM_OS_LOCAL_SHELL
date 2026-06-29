@@ -1,5 +1,9 @@
 # 项目输入日志
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Record Template | template | 由 ai-pm-os Skill 在每次接收输入时记录 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Active
 - 最后更新：YYYY-MM-DD

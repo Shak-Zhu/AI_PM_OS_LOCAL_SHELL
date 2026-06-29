@@ -52,7 +52,7 @@ const REQUIRED_FILES = [
 const FIELD_CHECKS = {
   'dashboard_state.json':    ['rag_status', 'overall_progress', 'open_actions', 'open_risks'],
   'project_state.json':     ['project_name', 'current_phase', 'overall_progress', 'rag_status'],
-  'scope.json':             ['scope_baseline', 'in_scope', 'out_of_scope'],
+  'scope.json':             ['scope_baseline', 'in_scope', 'out_of_scope', 'scope'],
   'milestones.json':        ['milestones'],
   'gantt.json':             ['tasks', 'status'],
   'raid.json':              ['items', 'risks'],
@@ -60,8 +60,8 @@ const FIELD_CHECKS = {
   'approvals.json':         ['approvals'],
   'sprints.json':          ['sprints', 'current_sprint'],
   'backlog.json':           ['backlog'],
-  'burndown.json':          ['sprint_id', 'total_points', 'days'],
-  'velocity.json':          ['velocity', 'sprints'],
+  'burndown.json':          ['sprint_id', 'days'],
+  'velocity.json':          ['velocity'],
   'meetings.json':          ['meetings'],
   'meeting_actions.json':   ['meeting_actions'],
   'meeting_decisions.json': ['meeting_decisions'],
@@ -119,6 +119,56 @@ function main() {
       error('No expected fields in: ' + file + ' (expected one of: ' + requiredFields.join(', ') + ')');
       failCount++;
       continue;
+    }
+
+    // WP-022 AC-09 fix: structural check for burndown days array items
+    if (file === 'burndown.json' && data && Array.isArray(data.days) && data.days.length > 0) {
+      const firstDay = data.days[0];
+      const burndownFields = ['sprint_id', 'date', 'planned_remaining_points', 'actual_remaining_points', 'completed_points', 'scope_added_points', 'scope_removed_points', 'blocked_points', 'source'];
+      let dayHasAllFields = true;
+      for (const bf of burndownFields) {
+        if (firstDay[bf] === undefined) { dayHasAllFields = false; break; }
+      }
+      if (!dayHasAllFields) {
+        error('burndown.json day item missing required 9-field contract fields');
+        failCount++;
+        continue;
+      }
+      // WP-022 AC-03 fix: numeric fields must be Number type
+      const numericFields = ['planned_remaining_points', 'actual_remaining_points', 'completed_points', 'scope_added_points', 'scope_removed_points', 'blocked_points'];
+      for (const nf of numericFields) {
+        if (typeof firstDay[nf] !== 'number') {
+          error('burndown.json field "' + nf + '" must be Number, got ' + typeof firstDay[nf]);
+          failCount++;
+          hasField = false;
+          break;
+        }
+      }
+    }
+
+    // WP-022 AC-04 fix: structural check for velocity items
+    if (file === 'velocity.json' && data && Array.isArray(data.velocity) && data.velocity.length > 0) {
+      const firstItem = data.velocity[0];
+      const velFields = ['sprint_id', 'planned_points', 'completed_points'];
+      let itemHasAllFields = true;
+      for (const vf of velFields) {
+        if (firstItem[vf] === undefined) { itemHasAllFields = false; break; }
+      }
+      if (!itemHasAllFields) {
+        error('velocity.json item missing required fields (sprint_id, planned_points, completed_points)');
+        failCount++;
+        continue;
+      }
+      // WP-022 AC-04 fix: numeric fields must be Number type
+      const velNumFields = ['planned_points', 'completed_points', 'accepted_points', 'carry_over_points', 'velocity_variance'];
+      for (const vnf of velNumFields) {
+        if (firstItem[vnf] !== undefined && typeof firstItem[vnf] !== 'number') {
+          error('velocity.json field "' + vnf + '" must be Number, got ' + typeof firstItem[vnf]);
+          failCount++;
+          hasField = false;
+          break;
+        }
+      }
     }
 
     log('PASS: ' + file);

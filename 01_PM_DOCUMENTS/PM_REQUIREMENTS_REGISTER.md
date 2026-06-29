@@ -1,11 +1,15 @@
 # 需求登记册
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Document Template | template | 由 Project Manager 在需求收集时维护 | 无真实项目数据 |
+
 - 版本：v0.1
 - 状态：Draft
 - 最后更新：YYYY-MM-DD
 - 来源：项目初始化后由 ai-pm-os Skill 生成
 
-> 本文件在项目初始化时由 ai-pm-os Skill 生成。实际需求条目由 Human Owner 提供的材料或 Pending Updates 批准后填入。
+> 本文件在项目初始化时由 ai-pm-os Skill 生成。实际需求条目由 Project Owner 提供的材料或 Pending Updates 批准后填入。
 
 ## 需求条目格式
 

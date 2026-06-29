@@ -39,7 +39,7 @@ var SOURCE_DECLARATIONS = [
   { json_file: 'scope.json',           source_path: '01_PM_DOCUMENTS/PM_SCOPE_BASELINE.md',            source_type: 'required',  reason: 'Scope baseline — must exist' },
   { json_file: 'backlog.json',         source_path: '02_AGILE/PM_PRODUCT_BACKLOG.md',                  source_type: 'required',  reason: 'Product backlog — must exist' },
   { json_file: 'sprints.json',         source_path: '02_AGILE/PM_SPRINT_BACKLOG.md',                  source_type: 'required',  reason: 'Sprint backlog — must exist' },
-  { json_file: 'burndown.json',        source_path: '02_AGILE/PM_DAILY_STANDUP_LOG.md',              source_type: 'required',  reason: 'Daily standup log — must exist' },
+  { json_file: 'burndown.json',        source_path: '02_AGILE/PM_BURNDOWN_DATA.md',        source_type: 'required',  reason: 'Burndown data — authoritative source for sprint burndown metrics' },
   { json_file: 'velocity.json',        source_path: '02_AGILE/PM_VELOCITY_LOG.md',                   source_type: 'required',  reason: 'Velocity log — must exist' },
   // Optional: source is a registry/template that does not exist in clean product shell
   // These are tracked by the sync script but expected to be absent in shell
@@ -200,17 +200,22 @@ function checkOrphanJsonEntries(jsonFile) {
       issues.push('item[' + i + ']: missing ID field');
     }
 
-    if (item.owner === undefined || item.owner === null || item.owner === '') {
-      issues.push('item[' + i + ']: missing owner');
-    }
+    // WP-022 fix: velocity and burndown are metric data — skip owner/status/due_date checks
+    if (jsonFile === 'velocity.json' || jsonFile === 'burndown.json') {
+      // metric data files: sprint_id is the identity, no owner/status/due_date required
+    } else {
+      if (item.owner === undefined || item.owner === null || item.owner === '') {
+        issues.push('item[' + i + ']: missing owner');
+      }
 
-    if (item.status === undefined || item.status === null || item.status === '') {
-      issues.push('item[' + i + ']: missing status');
-    }
+      if (item.status === undefined || item.status === null || item.status === '') {
+        issues.push('item[' + i + ']: missing status');
+      }
 
-    if ((jsonFile === 'actions.json' || jsonFile === 'todo.json') &&
-        (item.due_date === undefined || item.due_date === null || item.due_date === '')) {
-      issues.push('item[' + i + ']: missing due_date');
+      if ((jsonFile === 'actions.json' || jsonFile === 'todo.json') &&
+          (item.due_date === undefined || item.due_date === null || item.due_date === '')) {
+        issues.push('item[' + i + ']: missing due_date');
+      }
     }
   }
 

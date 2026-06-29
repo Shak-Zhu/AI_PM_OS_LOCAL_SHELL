@@ -1,5 +1,9 @@
 # Daily Briefing
 
+| doc_role | instance_status | init_behavior | fact_declaration |
+|---|---|---|---|
+| Project Record Template | template | 由 ai-pm-os Skill 在每日启动时生成 | 无真实项目数据 |
+
 - 日期：`INITIALIZE_PROJECT`
 - 状态：`INITIALIZE_PROJECT`
 
