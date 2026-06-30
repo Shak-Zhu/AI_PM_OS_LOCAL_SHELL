@@ -492,6 +492,21 @@ function copyDirFlat(src, dest, forbiddenList, projectRelPrefix) {
   }
 }
 
+function checkPopulatedSyncFixture() {
+  console.log('\n[Check 6b] Running populated data regression...');
+  var result = runNode('node scripts/verify-populated-sync.js', baseDir);
+  if (result.exitCode === 0) {
+    console.log('  PASS: populated sync regression exited 0');
+    return true;
+  }
+
+  console.log('  FAIL: populated sync regression failed (exit ' + result.exitCode + ')');
+  if (result.stdout) console.log(result.stdout.trim());
+  if (result.stderr) console.log(result.stderr.trim());
+  totalErrors++;
+  return false;
+}
+
 // =============================================================================
 // MAIN
 // =============================================================================
@@ -513,6 +528,9 @@ function main() {
     checkFullHostValidation();
     checkIsolatedPackageValidation();
     checkProductShellCopy();
+    if (strictMode) {
+      checkPopulatedSyncFixture();
+    }
     checkDashboard();
 
     console.log('\n=== Summary ===');

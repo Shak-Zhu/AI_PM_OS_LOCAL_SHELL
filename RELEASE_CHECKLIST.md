@@ -203,7 +203,8 @@ node scripts/verify-release.js --strict
 
 ## 7. P0 Governance Evidence Gate
 
-> **重要说明**：本 Gate 不替代 macOS 真实环境验证，不关闭 REQ-029。
+> **重要说明**：本 Gate 闭合当前 P0 `REQ-029` 的跨平台安全设计与 Windows 实测口径。
+> macOS 真实设备验证由 CHG-010 转入 P1 `REQ-036`，不由本 Gate 代替，也不阻塞 M1。
 
 ### 7.1 验证 P0 治理证据
 
@@ -223,9 +224,11 @@ node scripts/verify-governance.js
 | REQ-008 | 输入材料登记与归档 |
 | REQ-028 | Git checkpoint 与可追溯提交 |
 
-### 7.3 REQ-029 状态
+### 7.3 REQ-029 / REQ-036 状态
 
-> **REQ-029 not closed** — macOS 真实环境验证尚未执行。
+> **REQ-029 closed** — Windows 实测和跨平台安全设计已完成。
+>
+> **REQ-036 proposed / P1** — macOS 真实环境验证尚未执行，按 CHG-010 后续跟踪。
 
 ---
 
@@ -240,6 +243,7 @@ node scripts/verify-governance.js
 | `node scripts/check-pollution.js` | RESULT: PASS |
 | `node scripts/validate-data.js` | RESULT: PASS |
 | `node scripts/sync-data.js` | RESULT: PASS |
+| `node scripts/verify-populated-sync.js` | 13/13 populated outputs；26/26 hash 幂等 |
 | `node scripts/audit-data-consistency.js` | RESULT: PASS |
 | `git diff -- 07_DATA/` | 空（无变更） |
 
@@ -288,5 +292,6 @@ node scripts/sync-data.js
 | `ai-pm-os/scripts/validate-skill.js` | 包内验证入口（零依赖） |
 | `scripts/verify-governance.js` | P0 治理验证脚本 |
 | `scripts/verify-release.js` | 发布验证脚本 |
+| `scripts/verify-populated-sync.js` | 隔离 populated 数据同步、Schema、Dashboard smoke 与幂等验证 |
 | `scripts/check-pollution.js` | 仓库污染检查 |
 | `RELEASE_CHECKLIST.md` | 本文件 |

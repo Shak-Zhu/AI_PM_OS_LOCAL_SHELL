@@ -1409,6 +1409,8 @@ function syncFromTableSource(jsonFile) {
   var keyName;
   if (jsonFile === 'estimation.json') {
     keyName = 'estimates';
+  } else if (jsonFile === 'gantt.json') {
+    keyName = 'tasks';
   } else {
     keyName = jsonFile.replace('.json', '');
   }
