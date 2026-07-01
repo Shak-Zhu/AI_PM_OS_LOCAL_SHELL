@@ -213,6 +213,25 @@ function checkFullHostValidation() {
 }
 
 // =============================================================================
+// CHECK 4b: Remote Intake contract validation
+// =============================================================================
+
+function checkRemoteIntakeValidation() {
+  console.log('\n[Check 4b] Running Remote Intake contract validation...');
+
+  var result = runNode('node scripts/validate-remote-intake.js');
+
+  if (result.exitCode === 0) {
+    console.log('  PASS: Remote Intake validation exited 0');
+    return true;
+  } else {
+    console.log('  FAIL: Remote Intake validation exited ' + result.exitCode);
+    totalErrors++;
+    return false;
+  }
+}
+
+// =============================================================================
 // CHECK 5: Isolated ai-pm-os package copy validation
 // =============================================================================
 
@@ -229,13 +248,27 @@ function checkIsolatedPackageValidation() {
     var result = runNode('node ai-pm-os/scripts/validate-skill.js', tmpDir);
 
     if (result.exitCode === 0) {
-      console.log('  PASS: isolated package validation exited 0');
-      return true;
+      console.log('  OK: Skill validation passed in copied shell');
     } else {
-      console.log('  FAIL: isolated package validation exited ' + result.exitCode);
+      console.log('  FAIL: Skill validation failed in copied shell (exit ' + result.exitCode + ')');
       totalErrors++;
       return false;
     }
+
+    // WP-024-R2 / QC-F-273: Also run bootstrap offline tests in isolated package
+    if (strictMode) {
+      console.log('  INFO: --strict mode: also running Cooper helper bootstrap tests...');
+      var bootstrapResult = runNode('node ai-pm-os/scripts/bootstrap-cooper-helper.test.js', tmpDir);
+      if (bootstrapResult.exitCode === 0) {
+        console.log('  OK: Cooper helper bootstrap tests passed in isolated package');
+      } else {
+        console.log('  FAIL: Cooper helper bootstrap tests failed in isolated package (exit ' + bootstrapResult.exitCode + ')');
+        totalErrors++;
+        return false;
+      }
+    }
+
+    return true;
   } catch (e) {
     console.log('  FAIL: exception during isolated copy: ' + e.message);
     totalErrors++;
@@ -526,6 +559,7 @@ function main() {
       checkGovernance();
     }
     checkFullHostValidation();
+    checkRemoteIntakeValidation();
     checkIsolatedPackageValidation();
     checkProductShellCopy();
     if (strictMode) {

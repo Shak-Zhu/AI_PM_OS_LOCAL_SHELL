@@ -371,12 +371,14 @@ function checkREQ008() {
   const content = readFile('00_PM_MEMORY/PM_INPUT_LOG.md');
   let errors = 0;
 
-  // 1. Input Log structure
-  const hasInputID = /Input ID|输入 ID|InputID/i.test(content);
+  // 1. Input Log structure (17-column format: input_id, batch_id, ... OR Input ID, Batch ID, ...)
+  // PM_INPUT_LOG.md uses underscore-separated headers (input_id) per WP-024-R1
+  const hasInputID =
+    /input_id|Input ID|输入 ID|InputID/i.test(content);
   if (hasInputID) {
-    console.log('  OK: Input Log structure present');
+    console.log('  OK: Input Log structure present (underscore or space separated header)');
   } else {
-    console.log('  FAIL: Input Log structure missing (Input ID table header)');
+    console.log('  FAIL: Input Log structure missing (input_id table header)');
     errors++;
   }
 

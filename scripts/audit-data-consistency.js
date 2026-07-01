@@ -174,7 +174,7 @@ function checkOrphanJsonEntries(jsonFile) {
     'meetings.json': 'meetings', 'milestones.json': 'milestones',
     'raid.json': 'items', 'backlog.json': 'backlog', 'sprints.json': 'sprints',
     'burndown.json': 'burndown', 'velocity.json': 'velocity',
-    'project_roles.json': 'roles', 'input_log.json': 'entries'
+    'project_roles.json': 'roles', 'input_log.json': 'input_log'
   };
 
   var idFields = ['id', '_id', 'action_id', 'decision_id', 'todo_id',

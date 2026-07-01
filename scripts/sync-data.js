@@ -135,6 +135,25 @@ var HEADER_MAP = {
     'owner': 'owner',
     'progress': 'progress'
   },
+  'input_log.json': {
+    'input_id': 'input_id',
+    'batch_id': 'batch_id',
+    'received_at': 'received_at',
+    'source_type': 'source_type',
+    'provider': 'provider',
+    'source_locator': 'source_locator',
+    'resource_type': 'resource_type',
+    'resource_id': 'resource_id',
+    'retrieval_method': 'retrieval_method',
+    'access_status': 'access_status',
+    'completeness': 'completeness',
+    'read_scope': 'read_scope',
+    'source_fingerprint': 'source_fingerprint',
+    'processing_status': 'processing_status',
+    'related_input_id': 'related_input_id',
+    'related_updates': 'related_updates',
+    'notes': 'notes'
+  },
   'todo.json': {
     'todo id': 'todo_id',
     'id': 'todo_id',
@@ -727,6 +746,29 @@ function syncDashboardState() {
     latest_meeting_minutes_status: null
   };
 }
+
+// =============================================================================
+// SYNC: input_log.json (WP-024-R1)
+// =============================================================================
+
+/**
+ * Sync PM_INPUT_LOG.md table to input_log.json.
+ * Reuses the existing parseTableBasedItemsFromContent() with HEADER_MAP entries.
+ * Returns { input_log: entries }.
+ */
+function syncInputLog() {
+  var srcFile = path.join(BASE, '00_PM_MEMORY', 'PM_INPUT_LOG.md');
+  if (!fs.existsSync(srcFile)) {
+    return { __sync_error: 'required source file missing: 00_PM_MEMORY/PM_INPUT_LOG.md' };
+  }
+  var content = fs.readFileSync(srcFile, 'utf8');
+  var entries = parseTableBasedItemsFromContent(content, 'input_log.json');
+  return { input_log: entries };
+}
+
+// =============================================================================
+// SYNC: single-file sources
+// =============================================================================
 
 function syncFromSingleFile(jsonFile) {
   var srcRel = SOURCE_FILES[jsonFile];
@@ -1660,6 +1702,9 @@ function main() {
       } else if (jsonFile === 'progress.json') {
         // R1 fix (QC-F-219): derive progress from requirements, milestones, actions
         syncedData = syncFromProgress(jsonFile);
+      } else if (jsonFile === 'input_log.json') {
+        // WP-024-R1: dedicated input log sync from PM_INPUT_LOG.md table
+        syncedData = syncInputLog();
       } else if (TABLE_SOURCES[jsonFile]) {
         syncedData = syncFromTableSource(jsonFile);
       } else if (jsonFile === 'todo.json') {

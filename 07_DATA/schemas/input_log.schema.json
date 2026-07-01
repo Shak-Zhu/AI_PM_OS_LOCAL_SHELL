@@ -1,22 +1,96 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "input_log",
-  "description": "Input material log",
+  "description": "Unified input material log with remote intake support",
   "type": "object",
+  "required": ["input_log"],
   "properties": {
-    "inputs": {
+    "input_log": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["input_id", "source", "received_date"],
+        "required": [
+          "input_id",
+          "received_at",
+          "source_type",
+          "source_locator",
+          "retrieval_method",
+          "access_status",
+          "processing_status"
+        ],
         "properties": {
-          "input_id": { "type": "string" },
-          "source": { "type": "string" },
-          "received_date": { "type": "string" },
-          "processed": { "type": "boolean" },
-          "pu_generated": { "type": "boolean" }
-        }
+          "input_id": {
+            "type": "string",
+            "description": "Unique identifier for this input, e.g. IN-001"
+          },
+          "batch_id": {
+            "type": ["string", "null"],
+            "description": "Batch identifier for grouped inputs"
+          },
+          "received_at": {
+            "type": "string",
+            "description": "ISO 8601 timestamp when input was received"
+          },
+          "source_type": {
+            "type": "string",
+            "description": "One of: local_file, pasted_text, chat_upload, transcript, screenshot, print_pdf, cooper, browser_url"
+          },
+          "provider": {
+            "type": ["string", "null"],
+            "description": "Provider name, e.g. cooper, browser, user"
+          },
+          "source_locator": {
+            "type": "string",
+            "description": "URL, file path, or reference for the source"
+          },
+          "resource_type": {
+            "type": ["string", "null"],
+            "description": "Type of resource, e.g. webpage, document, image, spreadsheet"
+          },
+          "resource_id": {
+            "type": ["string", "null"],
+            "description": "External resource identifier if available"
+          },
+          "retrieval_method": {
+            "type": "string",
+            "description": "How the content was retrieved, e.g. file_read, cooper, browser"
+          },
+          "access_status": {
+            "type": "string",
+            "description": "success, denied, not_found, timeout, captcha_blocked, auth_required"
+          },
+          "completeness": {
+            "type": ["string", "null"],
+            "description": "complete, partial, truncated"
+          },
+          "read_scope": {
+            "type": ["string", "null"],
+            "description": "Scope of what was read, e.g. full_page, header_only"
+          },
+          "source_fingerprint": {
+            "type": ["string", "null"],
+            "description": "Content hash or version identifier"
+          },
+          "processing_status": {
+            "type": "string",
+            "description": "pending, processed, failed, skipped"
+          },
+          "related_input_id": {
+            "type": ["string", "null"],
+            "description": "Related input ID for follow-up or replacement"
+          },
+          "related_updates": {
+            "type": ["string", "null"],
+            "description": "IDs of related PU/Action/Decision updates"
+          },
+          "notes": {
+            "type": ["string", "null"],
+            "description": "Additional notes or context"
+          }
+        },
+        "additionalProperties": false
       }
     }
-  }
+  },
+  "additionalProperties": false
 }

@@ -45,6 +45,46 @@
    6 类审批（Scope Baseline / Pending Update / Change / Major Decision / Milestone-Release / UAT）必须满足 11 字段 + 来源校验；
    `one-click-copy = 完整正文单代码块`；不得依赖聊天记忆替代正式规则。
 
+## Cooper Helper Bootstrap
+
+Cooper helper 是可选的 Cooper MCP 集成组件。在 Memory Boot 后、正常意图路由前，
+检查 helper 是否已安装：
+
+- **自动触发**：首次调用 ai-pm-os 时，在 Memory Boot 完成后自动运行：
+  ```
+  node ai-pm-os/scripts/bootstrap-cooper-helper.js
+  ```
+- 已安装 → 永久跳过（状态 `installed`），不调用 runner。
+- 未安装且无 deferred/unavailable 状态 → 只允许固定安装命令之一：
+  - `d-skills add cooper-mcp-helper`
+  - `npx --yes --registry=http://npm.intra.xiaojukeji.com d-skills@latest add cooper-mcp-helper`
+- deferred/unavailable → 非阻塞，正常 Skill 工作流继续，不自动重试。
+- 成功安装后要求重启 Cursor/Codex，再引导配置和验证。
+- **重试**：只有用户明确说"重试 Cooper 安装"时，才运行：
+  ```
+  node ai-pm-os/scripts/bootstrap-cooper-helper.js --retry
+  ```
+- bootstrap 非 0 或 unavailable 不得阻断本次正常项目管理请求。
+
+详见 `ai-pm-os/references/cooper-helper-bootstrap.md`。
+
+## 统一 Remote Intake
+
+本产品支持八种并列输入方式，不是自动回退链：
+
+| 方式 | 说明 |
+|---|---|
+| `local_file` | 本地文件 |
+| `pasted_text` | 直接粘贴文本 |
+| `chat_upload` | 对话界面文件上传 |
+| `transcript` | 上一轮 Chat Transcript 引用 |
+| `screenshot` | 截图粘贴 |
+| `print_pdf` | 用户 Print 的 PDF 文件 |
+| `cooper` | Cooper MCP 读取（需首次安装引导） |
+| `browser_url` | 用户指定浏览器 URL |
+
+详细行为契约见 `ai-pm-os/references/remote-intake-rules.md`。
+
 不得越过上述文件直接猜测 Skill 行为；不得删除或弱化 `ai-pm-os/` 中
 任何强制条目。Skill 内核破坏时 `scripts/validate-skill.js` 必退出非 0。
 
